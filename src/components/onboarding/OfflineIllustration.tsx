@@ -47,7 +47,7 @@ export function OfflineIllustration({ play }: { play: boolean }) {
       >
         <div className="mx-auto h-1 w-6 rounded-pill bg-border" />
         <div className="flex items-center justify-between px-1">
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-ink-soft">Offline</span>
+          <span className="label-caps text-ink-soft">Offline</span>
           <WifiOff className="size-3 text-risk-medium" aria-hidden />
         </div>
         {[0, 1, 2].map((i) => (
