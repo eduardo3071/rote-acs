@@ -1,8 +1,11 @@
 /**
- * Local territory store: mockFamilies + visit overrides persisted in localStorage.
- * A future backend replaces this module; screens only use useFamilies/useFamily/registerVisit.
+ * Local territory store: Supabase-backed families (with a mock/offline cache fallback)
+ * plus visit overrides persisted in localStorage. Screens only use
+ * useFamilies/useFamily/registerVisit; a future backend swaps the fetch layer only.
  */
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { getSession } from "@/lib/session";
 import {
   calculateMockRiskScore,
   generateRiskReason,
@@ -17,6 +20,100 @@ const EVENT = "roteacs:territory";
 const NEIGHBOR_RADIUS_M = 200;
 const HIGH_PRIORITY_FLOOR = 70;
 const LOG_KEY = "roteacs.visits";
+const FAMILIES_CACHE_KEY = "roteacs_families_cache";
+
+// ---------- Supabase-backed families, with local cache fallback ----------
+
+interface FamiliesCache {
+  families: Family[];
+  cachedAt: string;
+}
+
+function mapFamilyRow(row: {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  water_source: string | null;
+  children_under5: number | null;
+  vaccinations_ok: boolean | null;
+  risk_score: number | null;
+  risk_reason: string | null;
+  cluster_risk: boolean | null;
+  last_visit_at: string | null;
+  created_at: string | null;
+}): Family {
+  return {
+    id: row.id,
+    name: row.name,
+    latitude: Number(row.lat),
+    longitude: Number(row.lon),
+    waterSource: (row.water_source as WaterSource) ?? "other",
+    childrenUnder5: row.children_under5 ?? 0,
+    lastVisit: row.last_visit_at ?? row.created_at ?? new Date().toISOString(),
+    giSymptoms: false,
+    feverSymptoms: false,
+    vaccinationsUpToDate: row.vaccinations_ok ?? true,
+    riskScore: row.risk_score ?? 0,
+    riskReason: row.risk_reason ?? "",
+    clusterRisk: row.cluster_risk ?? false,
+  };
+}
+
+function readFamiliesCache(): FamiliesCache | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(FAMILIES_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as FamiliesCache) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeFamiliesCache(families: Family[]) {
+  try {
+    window.localStorage.setItem(
+      FAMILIES_CACHE_KEY,
+      JSON.stringify({ families, cachedAt: new Date().toISOString() } satisfies FamiliesCache),
+    );
+  } catch {
+    // storage unavailable (private mode, quota) — cache is best-effort
+  }
+}
+
+/** Families loaded from the database and the date they were last cached, for the Perfil screen. */
+export function getFamiliesCacheMeta(): { count: number; cachedAt: string | null } {
+  const cache = readFamiliesCache();
+  return { count: cache?.families.length ?? 0, cachedAt: cache?.cachedAt ?? null };
+}
+
+/** Fetches this agent's families from Supabase; on failure, falls back to the last cached fetch. */
+async function loadRemoteFamilies(): Promise<Family[]> {
+  const session = await getSession();
+  if (!session) return mockFamilies;
+  const { data, error } = await supabase
+    .from("families")
+    .select("*")
+    .eq("acs_id", session.acsId)
+    .order("risk_score", { ascending: false });
+  if (error || !data) {
+    const cache = readFamiliesCache();
+    return cache?.families ?? mockFamilies;
+  }
+  const families = data.map(mapFamilyRow);
+  writeFamiliesCache(families);
+  return families;
+}
+
+/** Fetches a single family by id from Supabase; falls back to the cache, then the mock dataset. */
+async function loadRemoteFamily(id: string): Promise<Family | undefined> {
+  const { data, error } = await supabase.from("families").select("*").eq("id", id).single();
+  if (error || !data) {
+    const cache = readFamiliesCache();
+    return cache?.families.find((f) => f.id === id) ?? mockFamilies.find((f) => f.id === id);
+  }
+  return mapFamilyRow(data);
+}
 
 /** One locally recorded visit, kept until synced. */
 export interface VisitRecord extends VisitInput {
@@ -69,12 +166,12 @@ function write(o: Overrides) {
   window.dispatchEvent(new Event(EVENT));
 }
 
-export function getFamilies(overrides: Overrides = read()): Family[] {
-  return mockFamilies.map((base) => {
-    const o = overrides[base.id];
-    if (!o) return base;
+export function getFamilies(overrides: Overrides = read(), base: Family[] = mockFamilies): Family[] {
+  return base.map((family) => {
+    const o = overrides[family.id];
+    if (!o) return family;
     const { riskFloor, ...fields } = o;
-    const input: FamilyInput = { ...base, ...fields };
+    const input: FamilyInput = { ...family, ...fields };
     const score = Math.max(calculateMockRiskScore(input), riskFloor ?? 0);
     return { ...input, riskScore: Math.min(100, score), riskReason: generateRiskReason(input) };
   });
@@ -114,11 +211,25 @@ export function registerVisit(id: string, v: VisitInput): number {
   return raised;
 }
 
-/** Families with local visits applied. Starts from mock data, swaps to stored data after hydration. */
+/**
+ * Families with local visit overrides applied. Paints instantly from the mock dataset, then
+ * swaps in the agent's families from Supabase (or the offline cache, if the fetch fails).
+ */
 export function useFamilies(): Family[] {
+  const [base, setBase] = useState<Family[]>(mockFamilies);
+  useEffect(() => {
+    let active = true;
+    loadRemoteFamilies().then((families) => {
+      if (active) setBase(families);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const [list, setList] = useState<Family[]>(mockFamilies);
   useEffect(() => {
-    const sync = () => setList(getFamilies());
+    const sync = () => setList(getFamilies(read(), base));
     sync();
     window.addEventListener(EVENT, sync);
     window.addEventListener("storage", sync);
@@ -126,8 +237,33 @@ export function useFamilies(): Family[] {
       window.removeEventListener(EVENT, sync);
       window.removeEventListener("storage", sync);
     };
-  }, []);
+  }, [base]);
   return list;
 }
 
-export const useFamily = (id: string) => useFamilies().find((f) => f.id === id);
+/** Single family by id, fetched directly from Supabase with local overrides applied. */
+export function useFamily(id: string): Family | undefined {
+  const [base, setBase] = useState<Family | undefined>(() => mockFamilies.find((f) => f.id === id));
+  useEffect(() => {
+    let active = true;
+    loadRemoteFamily(id).then((family) => {
+      if (active && family) setBase(family);
+    });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const [family, setFamily] = useState<Family | undefined>(base);
+  useEffect(() => {
+    const sync = () => setFamily(base && getFamilies(read(), [base])[0]);
+    sync();
+    window.addEventListener(EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [base]);
+  return family;
+}

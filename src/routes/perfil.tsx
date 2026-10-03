@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Cloud, Copy, Database, Languages, Loader2, LogOut, Share2, ShieldCheck, User } from "lucide-react";
+import { CheckCircle2, Cloud, Copy, Database, Languages, Loader2, LogOut, Share2, ShieldCheck, Users, User } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getFamilies, getVisitLog, markAllSynced } from "@/lib/territory";
+import { getFamilies, getFamiliesCacheMeta, getVisitLog, markAllSynced } from "@/lib/territory";
 import { logout } from "@/lib/session";
 import { useAgentSession } from "@/lib/useAgentSession";
 
@@ -46,11 +46,13 @@ function ProfilePage() {
   const [storage, setStorage] = useState("");
   const [json, setJson] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [familiesCache, setFamiliesCache] = useState({ count: 0, cachedAt: null as string | null });
 
   const refresh = () => {
     setPending(getVisitLog().filter((r) => !r.synced).length);
     setLastSync(localStorage.getItem(SYNC_KEY));
     setStorage(storageUsed());
+    setFamiliesCache(getFamiliesCacheMeta());
   };
   useEffect(refresh, []);
 
@@ -97,8 +99,19 @@ function ProfilePage() {
           </span>
           <h1 className="text-title font-bold text-foreground">{session.name}</h1>
           <p className="text-body text-muted-foreground">Agente Comunitário de Saúde</p>
-          <p className="text-small text-ink-faint">Território: Comunidade Wanjiku · Kenya</p>
+          <p className="text-small text-ink-faint">Território: {session.territory ?? "Não informado"}</p>
         </header>
+
+        <section className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
+          <div className="flex items-center gap-4">
+            <Users className="size-6 shrink-0 text-primary" aria-hidden />
+            <p className="flex-1 text-body font-semibold text-foreground">Famílias carregadas do banco</p>
+            <span className="min-w-8 rounded-full bg-primary px-2 py-1 text-center text-small font-bold text-primary-foreground">{familiesCache.count}</span>
+          </div>
+          <p className="text-small text-muted-foreground">
+            {familiesCache.cachedAt ? `Último cache offline: ${formatSync(familiesCache.cachedAt)}` : "Ainda sem cache offline"}
+          </p>
+        </section>
 
         <section className="flex flex-col gap-4 rounded-md border border-border bg-card p-4">
           <div className="flex items-center gap-4">

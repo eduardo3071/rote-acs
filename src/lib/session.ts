@@ -5,6 +5,7 @@ export interface AgentSession {
   acsId: string;
   name: string;
   agentCode: string;
+  territory: string | null;
   loggedIn: true;
 }
 
@@ -20,10 +21,10 @@ export async function getSession(): Promise<AgentSession | null> {
   const code = authSession.user.email.split("@")[0]?.toUpperCase();
   if (!code) return null;
 
-  const { data: acs } = await supabase.from("acs").select("id,name,code").eq("code", code).single();
+  const { data: acs } = await supabase.from("acs").select("id,name,code,territory").eq("code", code).single();
   if (!acs) return null;
 
-  return { acsId: acs.id, name: acs.name, agentCode: acs.code, loggedIn: true };
+  return { acsId: acs.id, name: acs.name, agentCode: acs.code, territory: acs.territory, loggedIn: true };
 }
 
 /** Signs in with the agent code and password via Supabase Auth. */
