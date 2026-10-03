@@ -4,6 +4,7 @@ import { ArrowLeft, SearchX, ArrowDownWideNarrow } from "lucide-react";
 import { FamilySearch } from "@/components/families/FamilySearch";
 import { RiskFilter } from "@/components/families/RiskFilter";
 import { FamilyRiskCard } from "@/components/families/FamilyRiskCard";
+import { BottomNav } from "@/components/BottomNav";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { useFamilies } from "@/lib/territory";
 import { countByLevel, matchesFilter, type RiskFilterValue } from "@/lib/risk";
@@ -39,7 +40,7 @@ function FamiliesList() {
 
   return (
     <div className="field-surface min-h-screen">
-      <div className="mx-auto flex max-w-md flex-col gap-4 px-6 pb-8 pt-6 md:max-w-2xl">
+      <div className="mx-auto flex max-w-md flex-col gap-4 px-6 pb-24 pt-6 md:max-w-2xl">
         <header className="flex items-center gap-4">
           <Link to="/dashboard" aria-label="Voltar ao painel"
             className="grid size-10 shrink-0 place-items-center rounded-lg border border-border bg-card text-foreground">
@@ -81,6 +82,7 @@ function FamiliesList() {
           </ul>
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }
