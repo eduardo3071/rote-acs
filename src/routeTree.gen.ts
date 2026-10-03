@@ -54,9 +54,9 @@ const FamiliasIdIndexRoute = FamiliasIdIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const FamiliasIdVisitaRoute = FamiliasIdVisitaRouteImport.update({
-  id: '/visita',
-  path: '/visita',
-  getParentRoute: () => FamiliasIdRoute,
+  id: '/familias/$id/visita',
+  path: '/familias/$id/visita',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -130,6 +130,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   FamiliasIndexRoute: typeof FamiliasIndexRoute
+  FamiliasIdVisitaRoute: typeof FamiliasIdVisitaRoute
   FamiliasIdIndexRoute: typeof FamiliasIdIndexRoute
 }
 
@@ -186,10 +187,10 @@ declare module '@tanstack/react-router' {
     }
     '/familias/$id/visita': {
       id: '/familias/$id/visita'
-      path: '/visita'
+      path: '/familias/$id/visita'
       fullPath: '/familias/$id/visita'
       preLoaderRoute: typeof FamiliasIdVisitaRouteImport
-      parentRoute: typeof FamiliasIdRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -201,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   FamiliasIndexRoute: FamiliasIndexRoute,
+  FamiliasIdVisitaRoute: FamiliasIdVisitaRoute,
   FamiliasIdIndexRoute: FamiliasIdIndexRoute,
 }
 export const routeTree = rootRouteImport
