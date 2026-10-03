@@ -33,10 +33,10 @@ function Dashboard() {
   const navigate = useNavigate({ from: "/dashboard" });
   const session = useAgentSession();
   const [syncedAt] = useState(() => new Date());
+  const mockFamilies = useFamilies();
 
   if (!session) return <div className="field-surface min-h-screen" />;
 
-  const mockFamilies = useFamilies();
   const counts = countByLevel(mockFamilies);
   const top = [...mockFamilies].sort((a, b) => b.riskScore - a.riskScore)[0];
   const visitedToday = mockFamilies.filter((f) => daysSinceVisit(f) === 0).length;
