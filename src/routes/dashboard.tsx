@@ -47,7 +47,7 @@ function Dashboard() {
     <div className="field-surface min-h-screen">
       <div className="mx-auto flex max-w-md flex-col gap-6 px-6 pb-48 pt-6 md:max-w-2xl">
         <DashboardHeader session={session} hasAlerts={counts.high > 0} syncedAt={syncedAt}
-          onLogout={() => { logout(); navigate({ to: "/login", replace: true }); }} />
+          onLogout={async () => { await logout(); navigate({ to: "/login", replace: true }); }} />
 
         <div className="grid gap-4 md:grid-cols-2">
           <section className="rounded-xl border border-border bg-gradient-to-b from-elevated to-card p-4 shadow-primary/0 animate-rise-in">
