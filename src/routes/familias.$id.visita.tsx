@@ -65,7 +65,9 @@ function VisitFlow() {
   const reset = () => { setStep(1); setSymptoms(null); setWater(null); setChildren(family.childrenUnder5); setRaised(null); };
   const confirm = () => {
     if (symptoms === null || !water) return;
-    setRaised(registerVisit(family.id, { symptoms, waterSource: water, childrenUnder5: children }));
+    const n = registerVisit(family.id, { symptoms, waterSource: water, childrenUnder5: children });
+    if (symptoms) navigate({ to: "/familias/$id/protocolo", params: { id: family.id }, search: { vizinhos: n } });
+    else setRaised(n);
   };
 
   if (raised !== null) {

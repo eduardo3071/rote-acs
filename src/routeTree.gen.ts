@@ -14,8 +14,10 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
 import { Route as FamiliasIdIndexRouteImport } from './routes/familias.$id.index'
+import { Route as FamiliasIdProtocoloRouteImport } from './routes/familias.$id.protocolo'
 import { Route as FamiliasIdVisitaRouteImport } from './routes/familias.$id.visita'
 
 const IndexRoute = IndexRouteImport.update({
@@ -43,6 +45,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FamiliasIndexRoute = FamiliasIndexRouteImport.update({
   id: '/familias/',
   path: '/familias/',
@@ -51,6 +58,11 @@ const FamiliasIndexRoute = FamiliasIndexRouteImport.update({
 const FamiliasIdIndexRoute = FamiliasIdIndexRouteImport.update({
   id: '/familias/$id/',
   path: '/familias/$id/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FamiliasIdProtocoloRoute = FamiliasIdProtocoloRouteImport.update({
+  id: '/familias/$id/protocolo',
+  path: '/familias/$id/protocolo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FamiliasIdVisitaRoute = FamiliasIdVisitaRouteImport.update({
@@ -65,7 +77,9 @@ export interface FileRoutesByFullPath {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/perfil': typeof PerfilRoute
   '/familias/': typeof FamiliasIndexRoute
+  '/familias/$id/protocolo': typeof FamiliasIdProtocoloRoute
   '/familias/$id/visita': typeof FamiliasIdVisitaRoute
   '/familias/$id/': typeof FamiliasIdIndexRoute
 }
@@ -75,7 +89,9 @@ export interface FileRoutesByTo {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/perfil': typeof PerfilRoute
   '/familias': typeof FamiliasIndexRoute
+  '/familias/$id/protocolo': typeof FamiliasIdProtocoloRoute
   '/familias/$id/visita': typeof FamiliasIdVisitaRoute
   '/familias/$id': typeof FamiliasIdIndexRoute
 }
@@ -86,7 +102,9 @@ export interface FileRoutesById {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/perfil': typeof PerfilRoute
   '/familias/': typeof FamiliasIndexRoute
+  '/familias/$id/protocolo': typeof FamiliasIdProtocoloRoute
   '/familias/$id/visita': typeof FamiliasIdVisitaRoute
   '/familias/$id/': typeof FamiliasIdIndexRoute
 }
@@ -98,7 +116,9 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/login'
     | '/onboarding'
+    | '/perfil'
     | '/familias/'
+    | '/familias/$id/protocolo'
     | '/familias/$id/visita'
     | '/familias/$id/'
   fileRoutesByTo: FileRoutesByTo
@@ -108,7 +128,9 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/login'
     | '/onboarding'
+    | '/perfil'
     | '/familias'
+    | '/familias/$id/protocolo'
     | '/familias/$id/visita'
     | '/familias/$id'
   id:
@@ -118,7 +140,9 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/login'
     | '/onboarding'
+    | '/perfil'
     | '/familias/'
+    | '/familias/$id/protocolo'
     | '/familias/$id/visita'
     | '/familias/$id/'
   fileRoutesById: FileRoutesById
@@ -129,7 +153,9 @@ export interface RootRouteChildren {
   DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  PerfilRoute: typeof PerfilRoute
   FamiliasIndexRoute: typeof FamiliasIndexRoute
+  FamiliasIdProtocoloRoute: typeof FamiliasIdProtocoloRoute
   FamiliasIdVisitaRoute: typeof FamiliasIdVisitaRoute
   FamiliasIdIndexRoute: typeof FamiliasIdIndexRoute
 }
@@ -171,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/familias/': {
       id: '/familias/'
       path: '/familias'
@@ -183,6 +216,13 @@ declare module '@tanstack/react-router' {
       path: '/familias/$id'
       fullPath: '/familias/$id/'
       preLoaderRoute: typeof FamiliasIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/familias/$id/protocolo': {
+      id: '/familias/$id/protocolo'
+      path: '/familias/$id/protocolo'
+      fullPath: '/familias/$id/protocolo'
+      preLoaderRoute: typeof FamiliasIdProtocoloRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/familias/$id/visita': {
@@ -201,7 +241,9 @@ const rootRouteChildren: RootRouteChildren = {
   DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  PerfilRoute: PerfilRoute,
   FamiliasIndexRoute: FamiliasIndexRoute,
+  FamiliasIdProtocoloRoute: FamiliasIdProtocoloRoute,
   FamiliasIdVisitaRoute: FamiliasIdVisitaRoute,
   FamiliasIdIndexRoute: FamiliasIdIndexRoute,
 }

@@ -16,6 +16,29 @@ const KEY = "roteacs.territory";
 const EVENT = "roteacs:territory";
 const NEIGHBOR_RADIUS_M = 200;
 const HIGH_PRIORITY_FLOOR = 70;
+const LOG_KEY = "roteacs.visits";
+
+/** One locally recorded visit, kept until synced. */
+export interface VisitRecord extends VisitInput {
+  familyId: string;
+  at: string;
+  neighboursRaised: number;
+  synced?: boolean;
+}
+
+export function getVisitLog(): VisitRecord[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(window.localStorage.getItem(LOG_KEY) ?? "[]") ?? []; } catch { return []; }
+}
+
+function logVisit(r: VisitRecord) {
+  window.localStorage.setItem(LOG_KEY, JSON.stringify([...getVisitLog(), r]));
+}
+
+/** Marks every local visit as sent (mock sync, no network). */
+export function markAllSynced() {
+  window.localStorage.setItem(LOG_KEY, JSON.stringify(getVisitLog().map((r) => ({ ...r, synced: true }))));
+}
 
 type Override = Partial<FamilyInput> & { riskFloor?: number };
 type Overrides = Record<string, Override>;
@@ -87,6 +110,7 @@ export function registerVisit(id: string, v: VisitInput): number {
     }
   }
   write(overrides);
+  logVisit({ familyId: id, at: new Date().toISOString(), ...v, neighboursRaised: raised });
   return raised;
 }
 

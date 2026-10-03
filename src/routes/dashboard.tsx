@@ -8,6 +8,7 @@ import { TerritoryMap } from "@/components/dashboard/TerritoryMap";
 import { PriorityFamilyCard } from "@/components/dashboard/PriorityFamilyCard";
 import { DashboardMetricCard } from "@/components/dashboard/DashboardMetricCard";
 import { logout } from "@/lib/session";
+import { BottomNav } from "@/components/BottomNav";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { daysSinceVisit } from "@/data/families";
 import { useFamilies } from "@/lib/territory";
@@ -44,7 +45,7 @@ function Dashboard() {
 
   return (
     <div className="field-surface min-h-screen">
-      <div className="mx-auto flex max-w-md flex-col gap-6 px-6 pb-32 pt-6 md:max-w-2xl">
+      <div className="mx-auto flex max-w-md flex-col gap-6 px-6 pb-48 pt-6 md:max-w-2xl">
         <DashboardHeader session={session} hasAlerts={counts.high > 0} syncedAt={syncedAt}
           onLogout={() => { logout(); navigate({ to: "/login", replace: true }); }} />
 
@@ -86,13 +87,14 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 bg-gradient-to-t from-background via-background to-transparent px-6 pb-6 pt-8">
+      <div className="fixed inset-x-0 bottom-16 bg-gradient-to-t from-background via-background to-transparent px-6 pb-4 pt-8">
         <div className="mx-auto max-w-md md:max-w-2xl">
           <PrimaryButton arrow={false} onClick={() => navigate({ to: "/familias" })}>
             <ListOrdered className="!size-5" aria-hidden /> Ver famílias prioritárias
           </PrimaryButton>
         </div>
       </div>
+      <BottomNav />
     </div>
   );
 }
