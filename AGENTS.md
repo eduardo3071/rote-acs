@@ -18,3 +18,8 @@ Files under `src/components/ui/` come from the shadcn template and are imported 
 ## Design tokens
 
 All colors, type sizes, spacing and radii are semantic tokens defined in `src/styles.css`; components reference them through Tailwind utilities or shadcn variants and never hardcode a hex or an arbitrary color class. New screens import the same tokens rather than restating any value, so the FASE 1 identity stays the single source of truth.
+
+## Entry flow routes
+
+`/` is the splash (auto-advances to `/onboarding` after 2s); `/onboarding` ends on `/login`, which is a placeholder until the FASE 3 login screen exists. The FASE 1 design-system reference screen lives at `/design-system` — new app screens must not displace these routes; the login placeholder is the only file meant to be replaced.
+
