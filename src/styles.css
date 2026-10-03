@@ -134,7 +134,7 @@
 
   --primary: oklch(0.7041 0.1678 243.66); /* #16A8FF */
   --primary-dark: oklch(0.5641 0.1632 251.43); /* #0877D1 */
-  --primary-foreground: oklch(0.1784 0.0325 250.77); /* #06121F */
+  --primary-foreground: var(--background); /* #0A0F1E */
 
   --risk-high: oklch(0.6815 0.2081 19.18); /* #FF5263 */
   --risk-medium: oklch(0.8594 0.1583 85.79); /* #FFC83D */

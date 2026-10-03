@@ -9,7 +9,7 @@ export const PrimaryButton = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       block
       className={cn(
-        "h-13 rounded-md text-body font-semibold active:bg-primary-dark active:translate-y-0 active:scale-[0.98] disabled:opacity-40",
+        "h-13 rounded-md text-body font-semibold hover:bg-primary active:bg-primary/85 active:translate-y-0 active:scale-[0.98] disabled:opacity-40",
         className,
       )}
       {...props}
