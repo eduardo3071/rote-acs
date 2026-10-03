@@ -27,7 +27,7 @@ const schema = z.object({
   name: z.string().trim().min(1, "Digite seu nome").max(80, "Nome muito longo"),
   agentCode: z.string().trim().min(1, "Digite seu código").max(20, "Código muito longo"),
 });
-type Errors = Partial<Record<"name" | "agentCode", string>>;
+type Errors = { name?: string | undefined; agentCode?: string | undefined };
 
 function LoginScreen() {
   const navigate = useNavigate({ from: "/login" });
