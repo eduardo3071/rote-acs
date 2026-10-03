@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { getSession } from "@/lib/session";
 import { AppLogo } from "@/components/AppLogo";
 import { TerritoryBackdrop } from "@/components/TerritoryBackdrop";
 
@@ -29,7 +30,7 @@ function SplashScreen() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      navigate({ to: "/onboarding", replace: true });
+      navigate({ to: getSession() ? "/dashboard" : "/onboarding", replace: true });
     }, 2000);
     return () => window.clearTimeout(timer);
   }, [navigate]);
