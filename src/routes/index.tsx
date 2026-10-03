@@ -3,7 +3,7 @@ import { MapPin, Navigation, Phone, Search } from "lucide-react";
 import { RiskBadge, riskLabels, riskLevel } from "@/components/RiskBadge";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelMeta, PanelTitle } from "@/components/ui/panel";
-import { LabelCaps, Label } from "@/components/ui/label";
+import { Chip, LabelCaps } from "@/components/labels";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -134,7 +134,7 @@ function DesignSystemScreen() {
                 </span>
               </div>
             </div>
-            <Label>Fase 1</Label>
+            <Chip>Fase 1</Chip>
           </div>
           <p className="text-body text-ink-soft">
             Sistema de design para uso em campo: sol forte, tela barata, luva na mão. Tudo aqui foi
