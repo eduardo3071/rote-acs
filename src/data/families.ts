@@ -112,7 +112,7 @@ const others: FamilyInput[] = NAMES.slice(3).map((name, k) => {
     id: String(i).padStart(3, "0"),
     name,
     ...offset(r * Math.cos(a), r * Math.sin(a)),
-    waterSource: SOURCES[(i * 7) % 3],
+    waterSource: SOURCES[(i * 7) % 3] ?? "tap",
     childrenUnder5: (i * 5) % 4,
     lastVisit: isoDaysAgo(5 + ((i * 17) % 41)), // 5–45 days
     giSymptoms: i % 9 === 0,

@@ -53,7 +53,7 @@ function LoginScreen() {
 
   return (
     <div className="field-surface relative flex min-h-screen flex-col overflow-hidden">
-      <TerritoryBackdrop className="opacity-60" />
+      <div className="opacity-60"><TerritoryBackdrop /></div>
       <form
         onSubmit={submit}
         noValidate
@@ -87,7 +87,7 @@ function LoginScreen() {
 
 function Field({ id, label, placeholder, value, onChange, error, autoComplete }: {
   id: string; label: string; placeholder: string; value: string;
-  onChange: (v: string) => void; error?: string; autoComplete?: string;
+  onChange: (v: string) => void; error?: string | undefined; autoComplete?: string;
 }) {
   return (
     <div className="space-y-2">
