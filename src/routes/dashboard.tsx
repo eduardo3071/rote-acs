@@ -105,7 +105,7 @@ function Stat({ icon: Icon, tone, value, label }: { icon: LucideIcon; tone: Tone
         <Icon className="size-5" aria-hidden />
       </span>
       <div>
-        <p className={cn("text-display font-bold", toneClass[tone].split(" ")[0])}>{value}</p>
+        <p className={toneClass[tone].split(" ")[0]}><span className="text-display font-bold leading-none">{value}</span></p>
         <p className="mt-1 text-small text-muted-foreground">{label}</p>
       </div>
     </div>
