@@ -6,16 +6,16 @@ import { AppLogo } from "@/components/AppLogo";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { TerritoryBackdrop } from "@/components/TerritoryBackdrop";
 import { Input } from "@/components/ui/input";
-import { getSession, saveSession } from "@/lib/session";
+import { getSession, login } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Entrar — RoteACS" },
-      { name: "description", content: "Entre com seu nome e código de agente para acessar seu território no RoteACS." },
+      { name: "description", content: "Entre com seu código de agente e senha para acessar seu território no RoteACS." },
       { property: "og:title", content: "Entrar — RoteACS" },
-      { property: "og:description", content: "Entre com seu nome e código de agente para acessar seu território no RoteACS." },
+      { property: "og:description", content: "Entre com seu código de agente e senha para acessar seu território no RoteACS." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -24,30 +24,41 @@ export const Route = createFileRoute("/login")({
 });
 
 const schema = z.object({
-  name: z.string().trim().min(1, "Digite seu nome").max(80, "Nome muito longo"),
   agentCode: z.string().trim().min(1, "Digite seu código").max(20, "Código muito longo"),
+  password: z.string().min(1, "Digite sua senha").max(80, "Senha muito longa"),
 });
-type Errors = { name?: string | undefined; agentCode?: string | undefined };
+type Errors = { agentCode?: string | undefined; password?: string | undefined };
 
 function LoginScreen() {
   const navigate = useNavigate({ from: "/login" });
-  const [name, setName] = useState("");
   const [agentCode, setAgentCode] = useState("");
+  const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Errors>({});
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (getSession()) navigate({ to: "/dashboard", replace: true });
+    getSession().then((s) => {
+      if (s) navigate({ to: "/dashboard", replace: true });
+    });
   }, [navigate]);
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
-    const r = schema.safeParse({ name, agentCode });
+    setAuthError(null);
+    const r = schema.safeParse({ agentCode, password });
     if (!r.success) {
       const f = r.error.flatten().fieldErrors;
-      setErrors({ name: f.name?.[0], agentCode: f.agentCode?.[0] });
+      setErrors({ agentCode: f.agentCode?.[0], password: f.password?.[0] });
       return;
     }
-    saveSession(r.data.name, r.data.agentCode.toUpperCase());
+    setSubmitting(true);
+    const { error } = await login(r.data.agentCode, r.data.password);
+    setSubmitting(false);
+    if (error) {
+      setAuthError(error);
+      return;
+    }
     navigate({ to: "/dashboard", replace: true });
   }
 
@@ -66,16 +77,24 @@ function LoginScreen() {
         </div>
 
         <div className="mt-8 space-y-4 rounded-xl border border-border bg-card p-4">
-          <Field id="name" label="Nome do agente" placeholder="Digite seu nome" value={name}
-            autoComplete="name" error={errors.name}
-            onChange={(v) => { setName(v); setErrors((s) => ({ ...s, name: undefined })); }} />
-          <Field id="agentCode" label="Código do agente" placeholder="Ex.: ACS-001" value={agentCode}
-            autoComplete="off" error={errors.agentCode}
-            onChange={(v) => { setAgentCode(v); setErrors((s) => ({ ...s, agentCode: undefined })); }} />
+          <Field id="agentCode" label="Código do agente" placeholder="Ex.: ACS001" value={agentCode}
+            autoComplete="username" error={errors.agentCode}
+            onChange={(v) => { setAgentCode(v); setErrors((s) => ({ ...s, agentCode: undefined })); setAuthError(null); }} />
+          <Field id="password" label="Senha" placeholder="Digite sua senha" value={password} type="password"
+            autoComplete="current-password" error={errors.password}
+            onChange={(v) => { setPassword(v); setErrors((s) => ({ ...s, password: undefined })); setAuthError(null); }} />
         </div>
 
+        {authError && (
+          <p role="alert" className="mt-4 flex items-center gap-2 text-small text-risk-high">
+            <AlertCircle className="size-4 shrink-0" aria-hidden /> {authError}
+          </p>
+        )}
+
         <div className="mt-auto pt-8">
-          <PrimaryButton type="submit">ENTRAR</PrimaryButton>
+          <PrimaryButton type="submit" disabled={submitting}>
+            {submitting ? "ENTRANDO…" : "ENTRAR"}
+          </PrimaryButton>
           <p className="mt-4 flex items-center justify-center gap-2 text-small font-semibold text-risk-low">
             <Check className="size-4" aria-hidden /> Funciona offline
           </p>
@@ -85,15 +104,16 @@ function LoginScreen() {
   );
 }
 
-function Field({ id, label, placeholder, value, onChange, error, autoComplete }: {
+function Field({ id, label, placeholder, value, onChange, error, autoComplete, type }: {
   id: string; label: string; placeholder: string; value: string;
-  onChange: (v: string) => void; error?: string | undefined; autoComplete?: string;
+  onChange: (v: string) => void; error?: string | undefined; autoComplete?: string; type?: string;
 }) {
   return (
     <div className="space-y-2">
       <label htmlFor={id} className="label-caps text-muted-foreground">{label}</label>
       <Input
         id={id}
+        type={type ?? "text"}
         value={value}
         placeholder={placeholder}
         autoComplete={autoComplete}

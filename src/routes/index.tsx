@@ -30,7 +30,7 @@ function SplashScreen() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      navigate({ to: getSession() ? "/dashboard" : "/onboarding", replace: true });
+      getSession().then((s) => navigate({ to: s ? "/dashboard" : "/onboarding", replace: true }));
     }, 2000);
     return () => window.clearTimeout(timer);
   }, [navigate]);

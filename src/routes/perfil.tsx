@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Cloud, Copy, Database, Languages, Loader2, Share2, ShieldCheck, User } from "lucide-react";
+import { CheckCircle2, Cloud, Copy, Database, Languages, Loader2, LogOut, Share2, ShieldCheck, User } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getFamilies, getVisitLog, markAllSynced } from "@/lib/territory";
+import { logout } from "@/lib/session";
 import { useAgentSession } from "@/lib/useAgentSession";
 
 export const Route = createFileRoute("/perfil")({
@@ -37,6 +38,7 @@ function storageUsed() {
 }
 
 function ProfilePage() {
+  const navigate = useNavigate();
   const session = useAgentSession();
   const [pending, setPending] = useState(0);
   const [lastSync, setLastSync] = useState<string | null>(null);
@@ -137,6 +139,13 @@ function ProfilePage() {
             ))}
           </ul>
         </section>
+
+        <button
+          onClick={async () => { await logout(); navigate({ to: "/login", replace: true }); }}
+          className="flex h-14 items-center justify-center gap-2 rounded-lg border border-risk-high/40 bg-risk-high/10 text-body font-semibold text-risk-high"
+        >
+          <LogOut className="size-5" aria-hidden /> Sair
+        </button>
       </div>
 
       <Dialog open={json !== null} onOpenChange={(o) => !o && setJson(null)}>
