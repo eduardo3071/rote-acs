@@ -43,14 +43,14 @@ const OnboardingRoute = OnboardingRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const FamiliasIndexRoute = FamiliasIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => FamiliasRoute,
+  id: '/familias/',
+  path: '/familias/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const FamiliasIdRoute = FamiliasIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => FamiliasRoute,
+  id: '/familias/$id',
+  path: '/familias/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -117,6 +117,8 @@ export interface RootRouteChildren {
   DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  FamiliasIdRoute: typeof FamiliasIdRoute
+  FamiliasIndexRoute: typeof FamiliasIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -158,17 +160,17 @@ declare module '@tanstack/react-router' {
     }
     '/familias/': {
       id: '/familias/'
-      path: '/'
+      path: '/familias'
       fullPath: '/familias/'
       preLoaderRoute: typeof FamiliasIndexRouteImport
-      parentRoute: typeof FamiliasRoute
+      parentRoute: typeof rootRouteImport
     }
     '/familias/$id': {
       id: '/familias/$id'
-      path: '/$id'
+      path: '/familias/$id'
       fullPath: '/familias/$id'
       preLoaderRoute: typeof FamiliasIdRouteImport
-      parentRoute: typeof FamiliasRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -179,6 +181,8 @@ const rootRouteChildren: RootRouteChildren = {
   DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  FamiliasIdRoute: FamiliasIdRoute,
+  FamiliasIndexRoute: FamiliasIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
