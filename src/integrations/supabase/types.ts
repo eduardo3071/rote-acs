@@ -194,6 +194,7 @@ export type Database = {
           acs_id: string | null
           children_under5: number | null
           created_at: string | null
+          dhis2_exported_at: string | null
           family_id: string | null
           gi_symptom: boolean | null
           id: string
@@ -207,6 +208,7 @@ export type Database = {
           acs_id?: string | null
           children_under5?: number | null
           created_at?: string | null
+          dhis2_exported_at?: string | null
           family_id?: string | null
           gi_symptom?: boolean | null
           id?: string
@@ -220,6 +222,7 @@ export type Database = {
           acs_id?: string | null
           children_under5?: number | null
           created_at?: string | null
+          dhis2_exported_at?: string | null
           family_id?: string | null
           gi_symptom?: boolean | null
           id?: string

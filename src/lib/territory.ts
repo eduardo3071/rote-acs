@@ -182,6 +182,7 @@ async function trySyncRecord(record: QueuedVisit, acsId: string): Promise<{ ok: 
       gi_symptom: record.symptoms,
       water_source: record.waterSource,
       children_under5: Math.max(0, record.childrenUnder5),
+      synced_at: new Date().toISOString(),
     });
     if (insertError) return { ok: false, affected: 0 };
 
@@ -296,6 +297,66 @@ export async function confirmVisit(familyId: string, v: VisitInput): Promise<{ a
   }
 
   return { affected: result.affected, synced: result.ok };
+}
+
+// ---------- Fase 14: exportação DHIS2 real ----------
+
+interface VisitExportRow {
+  id: string;
+  visited_at: string;
+  gi_symptom: boolean | null;
+  water_source: string | null;
+  children_under5: number | null;
+  families: { name: string } | null;
+}
+
+export interface Dhis2ExportResult {
+  /** Full text to show/copy — starts with the `// Payload pronto…` comment line. */
+  payload: string;
+  count: number;
+}
+
+/**
+ * Builds a DHIS2 Tracker Events payload from this agent's synced-but-not-yet-exported
+ * visits, then marks them as exported. Never sends anything to a real DHIS2 server —
+ * only generates and returns the payload for the Perfil export modal.
+ */
+export async function exportToDhis2(): Promise<Dhis2ExportResult> {
+  const session = await getSession();
+  if (!session) throw new Error("Sessão expirada. Faça login novamente.");
+
+  const { data, error } = await supabase
+    .from("visits")
+    .select("id, visited_at, gi_symptom, water_source, children_under5, families(name)")
+    .eq("acs_id", session.acsId)
+    .not("synced_at", "is", null)
+    .is("dhis2_exported_at", null);
+  if (error) throw error;
+
+  const visits = (data ?? []) as unknown as VisitExportRow[];
+
+  const events = visits.map((v) => ({
+    program: "RoteACS_CHW",
+    orgUnit: "ROTEACS_TERRITORY",
+    eventDate: new Date(v.visited_at).toISOString(),
+    dataValues: [
+      { dataElement: "gi_symptom", value: v.gi_symptom ?? false },
+      { dataElement: "water_source", value: v.water_source ?? "other" },
+      { dataElement: "children_under5", value: v.children_under5 ?? 0 },
+      { dataElement: "family_name", value: v.families?.name ?? "" },
+    ],
+  }));
+
+  const payload = `// Payload pronto para importação via DHIS2 Import/Export\n${JSON.stringify({ events }, null, 2)}`;
+
+  if (visits.length > 0) {
+    await supabase
+      .from("visits")
+      .update({ dhis2_exported_at: new Date().toISOString() })
+      .in("id", visits.map((v) => v.id));
+  }
+
+  return { payload, count: visits.length };
 }
 
 /**

@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Cloud, Copy, Database, Languages, Loader2, LogOut, Share2, ShieldCheck, Users, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, Cloud, Copy, Database, Languages, Loader2, LogOut, Share2, ShieldCheck, Users, User } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getFamilies, getFamiliesCacheMeta, getLastSyncAt, getSyncQueue, getSyncQueueCounts, syncQueue } from "@/lib/territory";
+import { exportToDhis2, getFamiliesCacheMeta, getLastSyncAt, getSyncQueueCounts, syncQueue } from "@/lib/territory";
 import { logout } from "@/lib/session";
 import { useAgentSession } from "@/lib/useAgentSession";
 
@@ -44,6 +44,8 @@ function ProfilePage() {
   const [storage, setStorage] = useState("");
   const [json, setJson] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [familiesCache, setFamiliesCache] = useState({ count: 0, cachedAt: null as string | null });
 
   const refresh = () => {
@@ -61,21 +63,18 @@ function ProfilePage() {
     setState("done");
   };
 
-  const openExport = () => {
-    const queued = getSyncQueue();
-    const families = getFamilies();
-    const payload = {
-      source: "RoteACS",
-      agent: session ? { name: session.name, code: session.agentCode } : null,
-      exportedAt: new Date().toISOString(),
-      events: queued.map((v) => {
-        const f = families.find((x) => x.id === v.familyId);
-        return { familyId: v.familyId, familyName: f?.name, visitedAt: v.createdAt, diarrheaOrFever: v.symptoms,
-          waterSource: v.waterSource, childrenUnder5: v.childrenUnder5, riskScore: f?.riskScore, synced: v.status === "synced" };
-      }),
-    };
+  const openExport = async () => {
+    setExporting(true);
+    setExportError(null);
     setCopied(false);
-    setJson(JSON.stringify(payload, null, 2));
+    try {
+      const { payload } = await exportToDhis2();
+      setJson(payload);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Não foi possível gerar o export.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const copy = async () => {
@@ -129,10 +128,15 @@ function ProfilePage() {
           )}
         </section>
 
-        <button onClick={openExport}
-          className="flex h-14 items-center justify-center gap-2 rounded-lg border border-border bg-elevated text-body font-semibold text-primary">
-          <Share2 className="size-5" aria-hidden /> Exportar para DHIS2
+        <button onClick={openExport} disabled={exporting}
+          className="flex h-14 items-center justify-center gap-2 rounded-lg border border-border bg-elevated text-body font-semibold text-primary disabled:opacity-40">
+          {exporting ? <><Loader2 className="size-5 animate-spin" aria-hidden /> Gerando…</> : <><Share2 className="size-5" aria-hidden /> Exportar para DHIS2</>}
         </button>
+        {exportError && (
+          <p role="alert" className="flex items-center gap-2 text-small text-risk-high">
+            <AlertCircle className="size-4 shrink-0" aria-hidden /> {exportError}
+          </p>
+        )}
 
         <section className="flex flex-col gap-2">
           <h2 className="label-caps text-muted-foreground">Configurações</h2>
@@ -163,7 +167,7 @@ function ProfilePage() {
         <DialogContent className="max-w-sm border-border bg-card">
           <DialogHeader>
             <DialogTitle className="text-foreground">Exportar para DHIS2</DialogTitle>
-            <DialogDescription>Registros locais. Nada é enviado nesta versão.</DialogDescription>
+            <DialogDescription>Visitas sincronizadas ainda não exportadas. Nada é enviado a um servidor DHIS2 nesta versão.</DialogDescription>
           </DialogHeader>
           <pre className="max-h-72 overflow-auto rounded-sm border border-border bg-background p-2 text-label text-foreground">{json}</pre>
           <div className="grid grid-cols-2 gap-2">
