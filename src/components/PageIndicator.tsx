@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 
+/** Segmented bar indicator: active segment is long and cyan, others short and dark. */
 export function PageIndicator({
   count,
   active,
@@ -10,7 +11,7 @@ export function PageIndicator({
   onSelect?: (index: number) => void;
 }) {
   return (
-    <div className="flex items-center justify-center gap-2" role="tablist">
+    <div className="flex items-center gap-1" role="tablist">
       {Array.from({ length: count }, (_, i) => (
         <button
           key={i}
@@ -23,8 +24,8 @@ export function PageIndicator({
         >
           <span
             className={cn(
-              "block h-2 rounded-pill transition-all duration-300",
-              i === active ? "w-6 bg-primary" : "w-2 bg-border",
+              "block h-1 rounded-pill transition-all duration-500 ease-out",
+              i === active ? "w-8 bg-primary shadow-primary" : "w-4 bg-border",
             )}
           />
         </button>
