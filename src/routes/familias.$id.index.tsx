@@ -8,7 +8,7 @@ import { useFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/familias/$id")({
+export const Route = createFileRoute("/familias/$id/")({
   loader: ({ params }) => {
     const family = getFamilyById(params.id);
     if (!family) throw notFound();
