@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Baby, CalendarClock, Droplets, Info, Stethoscope, Syringe, Users, Clock, ClipboardPlus } from "lucide-react";
 import { RiskBadge } from "@/components/RiskBadge";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -46,6 +46,7 @@ function FamilyDetail() {
   const { family: initial } = Route.useLoaderData();
   const family = useFamily(initial.id) ?? initial;
   useAgentSession();
+  const navigate = useNavigate();
   const level = riskLevel(family.riskScore);
   const why = reasons(family);
   const symptoms = [family.giSymptoms && "Diarreia", family.feverSymptoms && "Febre"].filter(Boolean).join(" e ");
@@ -107,10 +108,8 @@ function FamilyDetail() {
       </div>
       <div className="fixed inset-x-0 bottom-0 border-t border-border bg-background/95 backdrop-blur">
         <div className="mx-auto max-w-md px-6 py-4">
-          <PrimaryButton asChild arrow={false}>
-            <Link to="/familias/$id/visita" params={{ id: family.id }}>
-              <ClipboardPlus className="!size-5" aria-hidden /> Registrar visita
-            </Link>
+          <PrimaryButton arrow={false} onClick={() => navigate({ to: "/familias/$id/visita", params: { id: family.id } })}>
+            <ClipboardPlus className="!size-5" aria-hidden /> Registrar visita
           </PrimaryButton>
         </div>
       </div>
