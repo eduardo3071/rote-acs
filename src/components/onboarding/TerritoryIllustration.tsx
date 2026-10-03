@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 const nodes = [
   { x: 50, y: 14, tone: "high" },
   { x: 86, y: 40, tone: "medium" },
-  { x: 78, y: 82, tone: "low" },
-  { x: 22, y: 80, tone: "high" },
+  { x: 84, y: 74, tone: "low" },
+  { x: 16, y: 74, tone: "high" },
   { x: 12, y: 38, tone: "low" },
-  { x: 62, y: 60, tone: "medium" },
+  { x: 50, y: 92, tone: "medium" },
 ] as const;
 
 const toneClass = {
