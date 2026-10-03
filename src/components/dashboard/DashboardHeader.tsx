@@ -11,7 +11,7 @@ export function DashboardHeader({
   const now = new Date();
   const date = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
   const time = syncedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  const firstName = session.name.split(" ")[0];
+  const firstName = session.name.split(" ")[0] ?? session.name;
 
   return (
     <header className="flex flex-col gap-4 animate-rise-in">

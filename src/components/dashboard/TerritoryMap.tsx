@@ -19,7 +19,7 @@ function project(f: Family) {
 }
 
 /** Compact dot map of the demo territory (fictional coordinates). */
-export function TerritoryMap({ families, focusId }: { families: Family[]; focusId?: string }) {
+export function TerritoryMap({ families, focusId }: { families: Family[]; focusId?: string | undefined }) {
   const pts = families.map((f) => ({ f, ...project(f), level: riskLevel(f.riskScore) }));
   const cluster = pts.filter((p) => p.f.clusterRisk);
   const cx = cluster.reduce((s, p) => s + p.x, 0) / (cluster.length || 1);
