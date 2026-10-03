@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { PrimaryButton } from "@/components/PrimaryButton";
+import { PageIndicator } from "@/components/PageIndicator";
+import { OnboardingSlide } from "@/components/OnboardingSlide";
+import { onboardingSteps as slides } from "@/data/onboarding";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -24,24 +26,6 @@ export const Route = createFileRoute("/onboarding")({
   }),
   component: OnboardingScreen,
 });
-
-const slides = [
-  {
-    icon: "🗂️",
-    title: "Priorize quem mais precisa",
-    text: "O RoteACS ordena as famílias do seu território pelo risco real — não pela distância ou ordem de cadastro.",
-  },
-  {
-    icon: "📡",
-    title: "Funciona sem internet",
-    text: "Todos os dados ficam no seu celular. Quando houver sinal, sincroniza com o sistema do Ministério.",
-  },
-  {
-    icon: null, // red circle is drawn with the risk token so it never falls back to a missing glyph
-    title: "Score de risco em tempo real",
-    text: "Quando você registra um sintoma, as famílias vizinhas sobem de prioridade automaticamente.",
-  },
-] as const;
 
 function OnboardingScreen() {
   const navigate = useNavigate({ from: "/onboarding" });
@@ -81,51 +65,32 @@ function OnboardingScreen() {
   return (
     <div className="field-surface flex h-dvh min-h-screen flex-col overflow-hidden">
       <div className="mx-auto flex w-full max-w-[430px] flex-1 flex-col overflow-hidden">
+        <div className="flex h-14 items-center justify-end px-4">
+          {!isLast && (
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/login" })}
+              className="h-11 rounded-md px-4 text-small font-medium text-ink-soft active:text-ink"
+            >
+              Pular
+            </button>
+          )}
+        </div>
         <div
           ref={trackRef}
           onScroll={handleScroll}
           className="flex flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {slides.map((slide, i) => (
-            <section
-              key={slide.title}
-              className="flex w-full shrink-0 snap-center flex-col justify-center gap-6 px-8"
-              aria-hidden={i !== active}
-            >
-              <div className="grid size-20 place-items-center rounded-lg border border-border bg-elevated shadow-raised">
-                {slide.icon ? (
-                  <span className="text-4xl leading-none">{slide.icon}</span>
-                ) : (
-                  <span className="size-6 rounded-pill bg-risk-high shadow-risk-high" />
-                )}
-              </div>
-              <div className="flex flex-col gap-3">
-                <h2 className="text-title text-ink">{slide.title}</h2>
-                <p className="text-body text-ink-soft">{slide.text}</p>
-              </div>
-            </section>
+            <OnboardingSlide key={slide.title} {...slide} hidden={i !== active} />
           ))}
         </div>
 
-        <footer className="flex flex-col gap-6 px-8 pt-4 pb-10">
-          <div className="flex items-center justify-center gap-2" role="tablist">
-            {slides.map((slide, i) => (
-              <button
-                key={slide.title}
-                role="tab"
-                aria-label={`Ir para o slide ${i + 1}`}
-                aria-selected={i === active}
-                onClick={() => goTo(i)}
-                className={cn(
-                  "h-2 rounded-pill transition-all duration-300",
-                  i === active ? "w-6 bg-primary" : "w-2 bg-border",
-                )}
-              />
-            ))}
-          </div>
-          <Button block size="lg" onClick={advance}>
+        <footer className="flex flex-col gap-6 px-8 pt-4 pb-8">
+          <PageIndicator count={slides.length} active={active} onSelect={goTo} />
+          <PrimaryButton onClick={advance}>
             {isLast ? "Começar" : "Continuar"}
-          </Button>
+          </PrimaryButton>
         </footer>
       </div>
     </div>
