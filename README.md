@@ -1,42 +1,56 @@
-# RoteACS - HackaNation
+# RoteACS — Community Health Agent Routing
 
-FASE 1 — Identidade Visual e Design System
+A predictive home-visit prioritization system for Community Health Agents (CHAs).
+Developed for HackaNation (7th edition) — World Bank "Small AI for Development" (Health) track.
 
-O que fazer: antes de qualquer tela, definir as cores, fontes e componentes base. O Lovable vai criar um arquivo de tema que todas as telas importam.
+## What it does
 
-Prompt para colar:
+Ranks families within the CHA's territory based on a locally calculated risk score,
+prioritizing those at highest risk before health issues escalate to the point of requiring a clinic visit.
+Detects spatial clusters of diarrhea and fever offline using Haversine distance
+(200m radius + shared water source) and propagates priority status to neighboring families in real-time.
 
-Crie o design system de um aplicativo mobile chamado RoteACS — Roteamento de Agentes Comunitários de Saúde. O app roda em campo com luz solar intensa e telas baratas, então o contraste precisa ser alto.
+## Why it is unique
 
-Paleta de cores: fundo principal #0A0F1E (azul-marinho quase preto), fundo de cards #111827, elementos elevados #1C2537, bordas #1E2D45, cor primária azul ciano #16A8FF, primária escura #0877D1, risco alto vermelho #FF5263, risco médio amarelo #FFC83D, risco baixo verde #19D98B, texto principal #F0F4FF, texto secundário #7B92B2, texto mudo #3D5170.
+Existing tools (Medic Predict, EarlyOut) require an external server.
+RoteACS runs 100% offline on the CHA's device — no cloud, no connectivity required.
 
-Fonte Inter do Google Fonts. Tamanhos: título grande 28px bold, título médio 22px bold, subtítulo 18px semibold, corpo 15px regular, pequeno 13px regular, rótulo 11px semibold maiúsculo com espaçamento de letras.
+## Tech Stack
 
-Espaçamentos 4, 8, 16, 24, 32. Bordas arredondadas 8, 12, 16 e pill 100.
+- React Native + Expo
+- Supabase (auth, PostgreSQL, Edge Functions)
+- RiskScore engine in pure JavaScript (no external ML model)
+- Haversine cluster detection with a 200-meter radius
+- Local SQLite + store-and-forward for DHIS2
 
-Crie um componente RiskBadge que recebe um número de 0 a 100 e exibe um círculo de 52×52px com borda de 2px colorida e fundo 13% opaco. De 70 a 100 usa vermelho #FF5263, de 40 a 69 usa amarelo #FFC83D, de 0 a 39 usa verde #19D98B. O número aparece em bold 20px na cor da borda.
+## Data Sources
 
-O que checar: fundo escuro, RiskBadge mostra 87 vermelho, 55 amarelo, 23 verde. Se as três cores aparecerem certas, avança.
+| Data | Source | License |
+|---|---|---|
+| Rural household coordinates | IBGE CNEFE 2022 | Public Domain |
+| Basic Health Units (UBS) | CNES/DATASUS 2024 | Public Domain |
+| Family names | Fictitious — preserves statistical confidentiality | — |
+| Clinical protocols | IMCI/WHO | Public Domain |
 
-This project was built with [Lovable](https://lovable.dev).
+Coordinates extracted from the municipality of Anapu, Pará (IBGE code 1500859),
+a remote region in Pará with a history of waterborne disease outbreaks. ## What the model does NOT detect
 
-**Live app**: https://rote-acs.lovable.app
+- Malaria (vector-borne, not waterborne)
+- Tuberculosis (airborne transmission)
+- Diseases without a spatial clustering pattern
 
-## Build with Lovable
+## Guardrails
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/17ed2fa4-7152-4046-a245-91cde43c2498).
+- Risk score ≠ diagnosis (explicit warning in the interface)
+- The CHW decides — the app only prioritizes the visit order
+- Family data remains on the device; synchronization is opt-in
+- The model does not act autonomously in any scenario
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+## Demo credentials
 
-## Development
+Agent code: ACS001
+Password: roteacs2026
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## How to run
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+npx expo start --tunnel
