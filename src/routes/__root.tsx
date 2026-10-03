@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { syncQueue } from "../lib/territory";
 
 function NotFoundComponent() {
   return (
@@ -134,6 +135,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    syncQueue();
+    window.addEventListener("online", syncQueue);
+    return () => window.removeEventListener("online", syncQueue);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

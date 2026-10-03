@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { AlertTriangle, ClipboardList, Droplets, Users } from "lucide-react";
+import { AlertTriangle, ClipboardList, CloudOff, Droplets, Users } from "lucide-react";
 import { z } from "zod";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { getFamilyById, type WaterSource } from "@/data/families";
@@ -7,7 +7,7 @@ import { useFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
 
 export const Route = createFileRoute("/familias/$id/protocolo")({
-  validateSearch: z.object({ vizinhos: z.number().int().min(0).optional() }),
+  validateSearch: z.object({ vizinhos: z.number().int().min(0).optional(), pendente: z.boolean().optional() }),
   loader: ({ params }) => {
     const family = getFamilyById(params.id);
     if (!family) throw notFound();
@@ -37,6 +37,7 @@ const STEPS = [
 const WASH: Partial<Record<WaterSource, string>> = {
   well: "Esta família usa água de poço. Oriente ferver por 1 minuto antes do consumo.",
   river: "Esta família usa água de rio. Oriente filtrar e tratar com cloro.",
+  igarape: "Esta família usa água de igarapé. Oriente filtrar e tratar com cloro antes do consumo.",
   tap: "Verifique se o recipiente de armazenamento tem tampa.",
 };
 
@@ -54,7 +55,7 @@ export function ReferralCard() {
 
 function ProtocolPage() {
   const { family: base } = Route.useLoaderData();
-  const { vizinhos = 0 } = Route.useSearch();
+  const { vizinhos = 0, pendente = false } = Route.useSearch();
   useAgentSession();
   const navigate = useNavigate();
   const family = useFamily(base.id) ?? base;
@@ -95,6 +96,12 @@ function ProtocolPage() {
             <h2 className="label-caps flex items-center gap-2 text-primary"><Droplets className="size-4" aria-hidden /> Orientação WASH</h2>
             <p className="mt-2 text-body text-foreground">{wash}</p>
           </section>
+        )}
+
+        {pendente && (
+          <p className="flex items-center gap-2 rounded-lg border border-border bg-elevated p-4 text-small font-semibold text-muted-foreground">
+            <CloudOff className="size-4 shrink-0" aria-hidden /> Sem conexão — será enviada quando a internet voltar.
+          </p>
         )}
 
         {vizinhos > 0 && (

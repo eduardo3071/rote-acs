@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { AlertCircle, ArrowLeft, Check, CheckCircle2, Loader2, Minus, Plus, Users } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, CheckCircle2, CloudOff, Loader2, Minus, Plus, Users } from "lucide-react";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { getFamilyById, waterSourceLabels, type WaterSource } from "@/data/families";
 import { confirmVisit, useFamily } from "@/lib/territory";
@@ -61,19 +61,19 @@ function VisitFlow() {
   const [symptoms, setSymptoms] = useState<boolean | null>(null);
   const [water, setWater] = useState<WaterSource | null>(null);
   const [children, setChildren] = useState(family.childrenUnder5);
-  const [raised, setRaised] = useState<number | null>(null);
+  const [result, setResult] = useState<{ affected: number; synced: boolean } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const reset = () => { setStep(1); setSymptoms(null); setWater(null); setChildren(family.childrenUnder5); setRaised(null); setError(null); };
+  const reset = () => { setStep(1); setSymptoms(null); setWater(null); setChildren(family.childrenUnder5); setResult(null); setError(null); };
   const confirm = async () => {
     if (symptoms === null || !water || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
-      const n = await confirmVisit(family.id, { symptoms, waterSource: water, childrenUnder5: children });
-      if (symptoms) navigate({ to: "/familias/$id/protocolo", params: { id: family.id }, search: { vizinhos: n } });
-      else setRaised(n);
+      const r = await confirmVisit(family.id, { symptoms, waterSource: water, childrenUnder5: children });
+      if (symptoms) navigate({ to: "/familias/$id/protocolo", params: { id: family.id }, search: { vizinhos: r.affected, pendente: !r.synced } });
+      else setResult(r);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Não foi possível salvar a visita. Tente novamente.");
     } finally {
@@ -81,7 +81,7 @@ function VisitFlow() {
     }
   };
 
-  if (raised !== null) {
+  if (result !== null) {
     return (
       <div className="field-surface flex min-h-screen flex-col">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 text-center animate-rise-in">
@@ -89,11 +89,18 @@ function VisitFlow() {
             <CheckCircle2 className="size-10 text-risk-low" aria-hidden />
           </span>
           <h1 className="text-display font-bold text-foreground">Visita registrada</h1>
-          <p className="text-body text-muted-foreground">Dados salvos no banco.</p>
-          {raised > 0 && (
+          <p className="text-body text-muted-foreground">
+            {result.synced ? "Dados salvos no banco." : "Dados salvos no dispositivo."}
+          </p>
+          {!result.synced && (
+            <p className="flex items-center gap-2 rounded-lg border border-border bg-elevated p-4 text-small font-semibold text-muted-foreground">
+              <CloudOff className="size-4 shrink-0" aria-hidden /> Sem conexão — será enviada quando a internet voltar.
+            </p>
+          )}
+          {result.affected > 0 && (
             <p className="flex items-center gap-2 rounded-lg border border-risk-high/40 bg-risk-high/13 p-4 text-small font-semibold text-risk-high">
               <Users className="size-4 shrink-0" aria-hidden />
-              {raised === 1 ? "1 família vizinha foi atualizada para alta prioridade." : `${raised} famílias vizinhas foram atualizadas para alta prioridade.`}
+              {result.affected === 1 ? "1 família vizinha foi atualizada para alta prioridade." : `${result.affected} famílias vizinhas foram atualizadas para alta prioridade.`}
             </p>
           )}
         </div>

@@ -19,8 +19,10 @@ import {
 const KEY = "roteacs.territory";
 const EVENT = "roteacs:territory";
 const REMOTE_REFRESH_EVENT = "roteacs:families-remote-refresh";
-const LOG_KEY = "roteacs.visits";
 const FAMILIES_CACHE_KEY = "roteacs_families_cache";
+const SYNC_QUEUE_KEY = "roteacs_sync_queue";
+const SYNC_QUEUE_EVENT = "roteacs:sync-queue";
+const LAST_SYNC_KEY = "roteacs.lastSync";
 
 /** Tells every mounted useFamilies/useFamily hook to refetch from Supabase. */
 function notifyFamiliesChanged() {
@@ -120,26 +122,112 @@ async function loadRemoteFamily(id: string): Promise<Family | undefined> {
   return mapFamilyRow(data);
 }
 
-/** One locally recorded visit, kept until synced. */
-export interface VisitRecord extends VisitInput {
+// ---------- offline-first sync queue (roteacs_sync_queue) ----------
+
+/** One visit saved locally, pending upload to Supabase. */
+export interface QueuedVisit extends VisitInput {
+  id: string;
   familyId: string;
-  at: string;
-  neighboursRaised: number;
-  synced?: boolean;
+  createdAt: string;
+  status: "pending" | "synced";
 }
 
-export function getVisitLog(): VisitRecord[] {
+function genLocalId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+export function getSyncQueue(): QueuedVisit[] {
   if (typeof window === "undefined") return [];
-  try { return JSON.parse(window.localStorage.getItem(LOG_KEY) ?? "[]") ?? []; } catch { return []; }
+  try {
+    return JSON.parse(window.localStorage.getItem(SYNC_QUEUE_KEY) ?? "[]") ?? [];
+  } catch {
+    return [];
+  }
 }
 
-function logVisit(r: VisitRecord) {
-  window.localStorage.setItem(LOG_KEY, JSON.stringify([...getVisitLog(), r]));
+function writeSyncQueue(queue: QueuedVisit[]) {
+  window.localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+  window.dispatchEvent(new Event(SYNC_QUEUE_EVENT));
 }
 
-/** Marks every local visit as sent (mock sync, no network). */
-export function markAllSynced() {
-  window.localStorage.setItem(LOG_KEY, JSON.stringify(getVisitLog().map((r) => ({ ...r, synced: true }))));
+/** Saves a visit to the local queue as pending, independent of connectivity. */
+function enqueueVisit(familyId: string, v: VisitInput): QueuedVisit {
+  const record: QueuedVisit = { id: genLocalId(), familyId, createdAt: new Date().toISOString(), status: "pending", ...v };
+  writeSyncQueue([...getSyncQueue(), record]);
+  return record;
+}
+
+export function getSyncQueueCounts(): { pending: number; synced: number } {
+  const queue = getSyncQueue();
+  return {
+    pending: queue.filter((r) => r.status === "pending").length,
+    synced: queue.filter((r) => r.status === "synced").length,
+  };
+}
+
+export function getLastSyncAt(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(LAST_SYNC_KEY);
+}
+
+/** Inserts the visit into Supabase and recalculates risk. Never throws — reports success via the return value. */
+async function trySyncRecord(record: QueuedVisit, acsId: string): Promise<{ ok: boolean; affected: number }> {
+  try {
+    const { error: insertError } = await supabase.from("visits").insert({
+      family_id: record.familyId,
+      acs_id: acsId,
+      visited_at: record.createdAt,
+      gi_symptom: record.symptoms,
+      water_source: record.waterSource,
+      children_under5: Math.max(0, record.childrenUnder5),
+    });
+    if (insertError) return { ok: false, affected: 0 };
+
+    let affected = 0;
+    try {
+      const { data } = await supabase.functions.invoke<{ affected: number }>("recalculate-risk", {
+        body: { family_id: record.familyId },
+      });
+      affected = data?.affected ?? 0;
+    } catch {
+      // visit is already saved; the score just stays stale until the next sync
+    }
+    return { ok: true, affected };
+  } catch {
+    return { ok: false, affected: 0 };
+  }
+}
+
+/**
+ * Pushes every pending queued visit to Supabase (+ recalculate-risk), marking each as
+ * synced on success and leaving it pending on failure. Safe to call anytime — on app
+ * open, when the browser comes back online, or from the SINCRONIZAR button.
+ */
+export async function syncQueue(): Promise<{ synced: number; pending: number }> {
+  const queue = getSyncQueue();
+  const session = await getSession();
+  if (session) {
+    let changed = false;
+    for (const record of queue) {
+      if (record.status !== "pending") continue;
+      const result = await trySyncRecord(record, session.acsId);
+      if (result.ok) {
+        record.status = "synced";
+        changed = true;
+      }
+    }
+    if (changed) {
+      writeSyncQueue(queue);
+      notifyFamiliesChanged();
+    }
+    window.localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+  }
+  return {
+    synced: queue.filter((r) => r.status === "synced").length,
+    pending: queue.filter((r) => r.status === "pending").length,
+  };
 }
 
 type Override = Partial<FamilyInput> & { riskFloor?: number };
@@ -187,34 +275,27 @@ export interface VisitInput {
 }
 
 /**
- * Persists a visit to Supabase, then calls the `recalculate-risk` Edge Function to
- * recompute the family's RiskScore and propagate priority to neighbours (<200 m, same
- * water source, GI symptom). Returns the number of neighbouring families affected.
+ * Saves a visit to the offline-first sync queue, then tries to push it to Supabase right
+ * away. If the device is offline, the visit stays queued as pending and uploads later via
+ * `syncQueue()` (app open, the browser's `online` event, or the SINCRONIZAR button).
  */
-export async function confirmVisit(familyId: string, v: VisitInput): Promise<number> {
+export async function confirmVisit(familyId: string, v: VisitInput): Promise<{ affected: number; synced: boolean }> {
   const session = await getSession();
   if (!session) throw new Error("Sessão expirada. Faça login novamente.");
 
-  const visitedAt = new Date().toISOString();
-  const { error: insertError } = await supabase.from("visits").insert({
-    family_id: familyId,
-    acs_id: session.acsId,
-    visited_at: visitedAt,
-    gi_symptom: v.symptoms,
-    water_source: v.waterSource,
-    children_under5: Math.max(0, v.childrenUnder5),
-  });
-  if (insertError) throw insertError;
+  const record = enqueueVisit(familyId, v);
+  const result = await trySyncRecord(record, session.acsId);
 
-  const { data, error: fnError } = await supabase.functions.invoke<{ affected: number }>("recalculate-risk", {
-    body: { family_id: familyId },
-  });
-  if (fnError) throw fnError;
+  if (result.ok) {
+    const queue = getSyncQueue();
+    const idx = queue.findIndex((r) => r.id === record.id);
+    if (idx !== -1) queue[idx] = { ...queue[idx], status: "synced" };
+    writeSyncQueue(queue);
+    window.localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+    notifyFamiliesChanged();
+  }
 
-  const affected = data?.affected ?? 0;
-  logVisit({ familyId, at: visitedAt, ...v, neighboursRaised: affected, synced: true });
-  notifyFamiliesChanged();
-  return affected;
+  return { affected: result.affected, synced: result.ok };
 }
 
 /**

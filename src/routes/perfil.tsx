@@ -4,7 +4,7 @@ import { CheckCircle2, Cloud, Copy, Database, Languages, Loader2, LogOut, Share2
 import { BottomNav } from "@/components/BottomNav";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getFamilies, getFamiliesCacheMeta, getVisitLog, markAllSynced } from "@/lib/territory";
+import { getFamilies, getFamiliesCacheMeta, getLastSyncAt, getSyncQueue, getSyncQueueCounts, syncQueue } from "@/lib/territory";
 import { logout } from "@/lib/session";
 import { useAgentSession } from "@/lib/useAgentSession";
 
@@ -18,10 +18,8 @@ export const Route = createFileRoute("/perfil")({
   component: ProfilePage,
 });
 
-const SYNC_KEY = "roteacs.lastSync";
-
 function formatSync(iso: string | null) {
-  if (!iso) return "Ontem, 17:42";
+  if (!iso) return "Nunca";
   const d = new Date(iso);
   const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   return d.toDateString() === new Date().toDateString() ? `Hoje, ${time}` : `${d.toLocaleDateString("pt-BR")}, ${time}`;
@@ -31,7 +29,7 @@ function storageUsed() {
   let chars = 0;
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i)!;
-    if (k.startsWith("roteacs.")) chars += k.length + (localStorage.getItem(k)?.length ?? 0);
+    if (k.startsWith("roteacs.") || k.startsWith("roteacs_")) chars += k.length + (localStorage.getItem(k)?.length ?? 0);
   }
   const kb = (chars * 2) / 1024;
   return kb < 1 ? "< 1 KB" : `~${kb.toFixed(1).replace(".", ",")} KB`;
@@ -40,7 +38,7 @@ function storageUsed() {
 function ProfilePage() {
   const navigate = useNavigate();
   const session = useAgentSession();
-  const [pending, setPending] = useState(0);
+  const [queue, setQueue] = useState({ pending: 0, synced: 0 });
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "syncing" | "done">("idle");
   const [storage, setStorage] = useState("");
@@ -49,34 +47,31 @@ function ProfilePage() {
   const [familiesCache, setFamiliesCache] = useState({ count: 0, cachedAt: null as string | null });
 
   const refresh = () => {
-    setPending(getVisitLog().filter((r) => !r.synced).length);
-    setLastSync(localStorage.getItem(SYNC_KEY));
+    setQueue(getSyncQueueCounts());
+    setLastSync(getLastSyncAt());
     setStorage(storageUsed());
     setFamiliesCache(getFamiliesCacheMeta());
   };
   useEffect(refresh, []);
 
-  const sync = () => {
+  const sync = async () => {
     setState("syncing");
-    setTimeout(() => {
-      markAllSynced();
-      localStorage.setItem(SYNC_KEY, new Date().toISOString());
-      refresh();
-      setState("done");
-    }, 2000);
+    await syncQueue();
+    refresh();
+    setState("done");
   };
 
   const openExport = () => {
-    const visits = getVisitLog();
+    const queued = getSyncQueue();
     const families = getFamilies();
     const payload = {
       source: "RoteACS",
       agent: session ? { name: session.name, code: session.agentCode } : null,
       exportedAt: new Date().toISOString(),
-      events: visits.map((v) => {
+      events: queued.map((v) => {
         const f = families.find((x) => x.id === v.familyId);
-        return { familyId: v.familyId, familyName: f?.name, visitedAt: v.at, diarrheaOrFever: v.symptoms,
-          waterSource: v.waterSource, childrenUnder5: v.childrenUnder5, riskScore: f?.riskScore };
+        return { familyId: v.familyId, familyName: f?.name, visitedAt: v.createdAt, diarrheaOrFever: v.symptoms,
+          waterSource: v.waterSource, childrenUnder5: v.childrenUnder5, riskScore: f?.riskScore, synced: v.status === "synced" };
       }),
     };
     setCopied(false);
@@ -117,10 +112,13 @@ function ProfilePage() {
           <div className="flex items-center gap-4">
             <Cloud className="size-6 shrink-0 text-primary" aria-hidden />
             <p className="flex-1 text-body font-semibold text-foreground">Registros aguardando envio</p>
-            <span className="min-w-8 rounded-full bg-primary px-2 py-1 text-center text-small font-bold text-primary-foreground">{pending}</span>
+            <span className="min-w-8 rounded-full bg-primary px-2 py-1 text-center text-small font-bold text-primary-foreground">{queue.pending}</span>
           </div>
+          <p className="flex items-center gap-2 text-small text-muted-foreground">
+            <CheckCircle2 className="size-4 shrink-0 text-risk-low" aria-hidden /> {queue.synced} registros sincronizados
+          </p>
           <p className="text-small text-muted-foreground">Última sincronização: {formatSync(lastSync)}</p>
-          {state === "done" ? (
+          {state === "done" && queue.pending === 0 ? (
             <p role="status" className="flex h-14 items-center justify-center gap-2 rounded-lg border border-risk-low bg-risk-low/15 text-body font-bold text-risk-low">
               <CheckCircle2 className="size-5" aria-hidden /> Sincronizado
             </p>
