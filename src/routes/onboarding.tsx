@@ -37,7 +37,7 @@ const slides = [
     text: "Todos os dados ficam no seu celular. Quando houver sinal, sincroniza com o sistema do Ministério.",
   },
   {
-    icon: "🔴",
+    icon: null, // red circle is drawn with the risk token so it never falls back to a missing glyph
     title: "Score de risco em tempo real",
     text: "Quando você registra um sintoma, as famílias vizinhas sobem de prioridade automaticamente.",
   },
@@ -93,7 +93,11 @@ function OnboardingScreen() {
               aria-hidden={i !== active}
             >
               <div className="grid size-20 place-items-center rounded-lg border border-border bg-elevated shadow-raised">
-                <span className="text-4xl leading-none">{slide.icon}</span>
+                {slide.icon ? (
+                  <span className="text-4xl leading-none">{slide.icon}</span>
+                ) : (
+                  <span className="size-6 rounded-pill bg-risk-high shadow-risk-high" />
+                )}
               </div>
               <div className="flex flex-col gap-3">
                 <h2 className="text-title text-ink">{slide.title}</h2>
