@@ -12,9 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DesignSystemRouteImport } from './routes/design-system'
-import { Route as FamiliasRouteImport } from './routes/familias'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
+import { Route as FamiliasIdRouteImport } from './routes/familias.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -31,11 +32,6 @@ const DesignSystemRoute = DesignSystemRouteImport.update({
   path: '/design-system',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FamiliasRoute = FamiliasRouteImport.update({
-  id: '/familias',
-  path: '/familias',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -46,31 +42,44 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FamiliasIndexRoute = FamiliasIndexRouteImport.update({
+  id: '/familias/',
+  path: '/familias/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FamiliasIdRoute = FamiliasIdRouteImport.update({
+  id: '/familias/$id',
+  path: '/familias/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/design-system': typeof DesignSystemRoute
-  '/familias': typeof FamiliasRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/familias/$id': typeof FamiliasIdRoute
+  '/familias/': typeof FamiliasIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/design-system': typeof DesignSystemRoute
-  '/familias': typeof FamiliasRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/familias/$id': typeof FamiliasIdRoute
+  '/familias': typeof FamiliasIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/design-system': typeof DesignSystemRoute
-  '/familias': typeof FamiliasRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/familias/$id': typeof FamiliasIdRoute
+  '/familias/': typeof FamiliasIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -78,34 +87,38 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/design-system'
-    | '/familias'
     | '/login'
     | '/onboarding'
+    | '/familias/$id'
+    | '/familias/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
     | '/design-system'
-    | '/familias'
     | '/login'
     | '/onboarding'
+    | '/familias/$id'
+    | '/familias'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
     | '/design-system'
-    | '/familias'
     | '/login'
     | '/onboarding'
+    | '/familias/$id'
+    | '/familias/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   DesignSystemRoute: typeof DesignSystemRoute
-  FamiliasRoute: typeof FamiliasRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
+  FamiliasIdRoute: typeof FamiliasIdRoute
+  FamiliasIndexRoute: typeof FamiliasIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -131,13 +144,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignSystemRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/familias': {
-      id: '/familias'
-      path: '/familias'
-      fullPath: '/familias'
-      preLoaderRoute: typeof FamiliasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -152,6 +158,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/familias/': {
+      id: '/familias/'
+      path: '/familias'
+      fullPath: '/familias/'
+      preLoaderRoute: typeof FamiliasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/familias/$id': {
+      id: '/familias/$id'
+      path: '/familias/$id'
+      fullPath: '/familias/$id'
+      preLoaderRoute: typeof FamiliasIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -159,9 +179,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   DesignSystemRoute: DesignSystemRoute,
-  FamiliasRoute: FamiliasRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
+  FamiliasIdRoute: FamiliasIdRoute,
+  FamiliasIndexRoute: FamiliasIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

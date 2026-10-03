@@ -1,10 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Bell, Map, AlertTriangle, ShieldCheck, Flame, Eye, CheckCircle2, CalendarClock, LogOut, type LucideIcon } from "lucide-react";
+import { useState } from "react";
+import { Flame, Eye, CheckCircle2, CalendarClock, ListOrdered, Map as MapIcon } from "lucide-react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { getSession, logout, type AgentSession } from "@/lib/session";
-import { mockFamilies, daysSinceVisit } from "@/data/families";
-import { cn } from "@/lib/utils";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { TerritoryRiskChart } from "@/components/dashboard/TerritoryRiskChart";
+import { TerritoryMap } from "@/components/dashboard/TerritoryMap";
+import { PriorityFamilyCard } from "@/components/dashboard/PriorityFamilyCard";
+import { DashboardMetricCard } from "@/components/dashboard/DashboardMetricCard";
+import { logout } from "@/lib/session";
+import { useAgentSession } from "@/lib/useAgentSession";
+import { mockFamilies, daysSinceVisit, getFamiliesSortedByRisk } from "@/data/families";
+import { countByLevel, priorityLabels, type RiskLevel } from "@/lib/risk";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -20,93 +26,70 @@ export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
 });
 
-function getDashboardStats(now = Date.now()) {
-  return {
-    high: mockFamilies.filter((f) => f.riskScore >= 70).length,
-    medium: mockFamilies.filter((f) => f.riskScore >= 40 && f.riskScore < 70).length,
-    visitedToday: mockFamilies.filter((f) => daysSinceVisit(f, now) === 0).length,
-    overdue: mockFamilies.filter((f) => daysSinceVisit(f, now) >= 30).length,
-  };
-}
-
-type Tone = "high" | "medium" | "low" | "primary";
-const toneClass: Record<Tone, string> = {
-  high: "text-risk-high bg-risk-high/15",
-  medium: "text-risk-medium bg-risk-medium/15",
-  low: "text-risk-low bg-risk-low/15",
-  primary: "text-primary bg-primary/15",
-};
+const dot: Record<RiskLevel, string> = { high: "bg-risk-high", medium: "bg-risk-medium", low: "bg-risk-low" };
 
 function Dashboard() {
   const navigate = useNavigate({ from: "/dashboard" });
-  const [session, setSession] = useState<AgentSession | null>(null);
-  const stats = getDashboardStats();
-
-  useEffect(() => {
-    const s = getSession();
-    if (!s) navigate({ to: "/login", replace: true });
-    else setSession(s);
-  }, [navigate]);
+  const session = useAgentSession();
+  const [syncedAt] = useState(() => new Date());
 
   if (!session) return <div className="field-surface min-h-screen" />;
 
-  const alert = stats.high > 0;
-  const firstName = session.name.split(" ")[0];
+  const counts = countByLevel(mockFamilies);
+  const top = getFamiliesSortedByRisk()[0];
+  const visitedToday = mockFamilies.filter((f) => daysSinceVisit(f) === 0).length;
+  const overdue = mockFamilies.filter((f) => daysSinceVisit(f) >= 30).length;
 
   return (
     <div className="field-surface min-h-screen">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 pb-8 pt-8">
-        <header className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-title font-bold text-foreground">Bom dia, {firstName}</h1>
-            <p className="mt-1 text-small text-muted-foreground">Seu território está atualizado</p>
-          </div>
-          <div className="flex gap-2">
-            <button aria-label="Notificações" className="relative grid size-11 place-items-center rounded-lg border border-border bg-card text-foreground">
-              <Bell className="size-5" />
-              {alert && <span className="absolute right-2 top-2 size-2 rounded-pill bg-risk-high" />}
-            </button>
-            <button aria-label="Sair" onClick={() => { logout(); navigate({ to: "/login", replace: true }); }}
-              className="grid size-11 place-items-center rounded-lg border border-border bg-card text-muted-foreground">
-              <LogOut className="size-5" />
-            </button>
-          </div>
-        </header>
+      <div className="mx-auto flex max-w-md flex-col gap-6 px-6 pb-32 pt-6 md:max-w-2xl">
+        <DashboardHeader session={session} hasAlerts={counts.high > 0} syncedAt={syncedAt}
+          onLogout={() => { logout(); navigate({ to: "/login", replace: true }); }} />
 
-        <div role="status" className={cn("flex items-center gap-4 rounded-xl border p-4",
-          alert ? "border-risk-high bg-risk-high/10" : "border-risk-low bg-risk-low/10")}>
-          {alert ? <AlertTriangle className="size-6 shrink-0 text-risk-high" /> : <ShieldCheck className="size-6 shrink-0 text-risk-low" />}
-          <p className="text-body font-semibold text-foreground">
-            {alert ? `${stats.high} ${stats.high === 1 ? "família precisa" : "famílias precisam"} de atenção hoje` : "Território sob controle"}
-          </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <section className="rounded-xl border border-border bg-gradient-to-b from-elevated to-card p-4 shadow-primary/0 animate-rise-in">
+            <p className="label-caps text-muted-foreground">Resumo do território</p>
+            <div className="mt-4"><TerritoryRiskChart counts={counts} total={mockFamilies.length} /></div>
+            <ul className="mt-4 grid grid-cols-3 gap-2">
+              {(["high", "medium", "low"] as RiskLevel[]).map((l) => (
+                <li key={l} className="rounded-lg bg-background/60 p-2 text-center">
+                  <p className="text-subtitle font-bold tabular-nums text-foreground">{counts[l]}</p>
+                  <p className="mt-1 flex items-center justify-center gap-1 text-label text-muted-foreground">
+                    <span className={`size-2 rounded-pill ${dot[l]}`} />{priorityLabels[l]}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded-xl border border-border bg-card p-4 animate-rise-in">
+            <div className="flex items-center justify-between">
+              <p className="label-caps flex items-center gap-1 text-muted-foreground"><MapIcon className="size-3" aria-hidden /> Território</p>
+              <span className="text-label text-ink-faint">Ilustrativo</span>
+            </div>
+            <div className="mx-auto mt-2 max-w-[14rem]"><TerritoryMap families={mockFamilies} focusId={top?.id} /></div>
+            <p className="mt-2 text-small text-muted-foreground">
+              Área circulada: famílias próximas com a mesma fonte de água.
+            </p>
+          </section>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Stat icon={Flame} tone="high" value={stats.high} label="Alta prioridade" />
-          <Stat icon={Eye} tone="medium" value={stats.medium} label="Atenção" />
-          <Stat icon={CheckCircle2} tone="low" value={stats.visitedToday} label="Visitadas hoje" />
-          <Stat icon={CalendarClock} tone="primary" value={stats.overdue} label="Sem visita há 30 dias" />
-        </div>
+        {top && <PriorityFamilyCard family={top} />}
 
-        <div className="mt-auto pt-4">
-          <PrimaryButton arrow={false} onClick={() => navigate({ to: "/familias" })}>
-            <Map className="!size-5" aria-hidden /> Ver famílias prioritárias
-          </PrimaryButton>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <DashboardMetricCard icon={Flame} tone="high" value={counts.high} label="Alta prioridade" />
+          <DashboardMetricCard icon={Eye} tone="medium" value={counts.medium} label="Atenção" />
+          <DashboardMetricCard icon={CheckCircle2} tone="low" value={visitedToday} label="Visitadas hoje" />
+          <DashboardMetricCard icon={CalendarClock} tone="primary" value={overdue} label="Sem visita há 30 dias" />
         </div>
       </div>
-    </div>
-  );
-}
 
-function Stat({ icon: Icon, tone, value, label }: { icon: LucideIcon; tone: Tone; value: number; label: string }) {
-  return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4">
-      <span className={cn("grid size-10 place-items-center rounded-lg", toneClass[tone])}>
-        <Icon className="size-5" aria-hidden />
-      </span>
-      <div>
-        <p className={toneClass[tone].split(" ")[0]}><span className="text-display font-bold leading-none">{value}</span></p>
-        <p className="mt-1 text-small text-muted-foreground">{label}</p>
+      <div className="fixed inset-x-0 bottom-0 bg-gradient-to-t from-background via-background to-transparent px-6 pb-6 pt-8">
+        <div className="mx-auto max-w-md md:max-w-2xl">
+          <PrimaryButton arrow={false} onClick={() => navigate({ to: "/familias" })}>
+            <ListOrdered className="!size-5" aria-hidden /> Ver famílias prioritárias
+          </PrimaryButton>
+        </div>
       </div>
     </div>
   );
