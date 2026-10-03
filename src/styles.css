@@ -61,6 +61,11 @@
   --text-label--font-weight: 600;
   --text-label--letter-spacing: 0.1em;
 
+  --text-brand: 2.5rem; /* 40 bold — RoteACS wordmark on the splash only */
+  --text-brand--line-height: 1;
+  --text-brand--font-weight: 800;
+  --text-brand--letter-spacing: -0.035em;
+
   --text-badge: 1.25rem; /* 20 bold — RiskBadge number */
   --text-badge--line-height: 1;
   --text-badge--font-weight: 700;
@@ -257,4 +262,33 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .animate-splash-in, .animate-logo-glow { animation: none; }
+}
+
+/* Staggered entrance for illustration pieces and copy. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes draw-line {
+  from { stroke-dashoffset: 400; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes fill-bar {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes orbit {
+  to { transform: rotate(360deg); }
+}
+@utility animate-rise-in { animation: rise-in 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@utility animate-pop-in { animation: pop-in 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+@utility animate-draw-line { stroke-dasharray: 400; animation: draw-line 1100ms ease-out both; }
+@utility animate-fill-bar { transform-origin: left; animation: fill-bar 2000ms linear both; }
+@utility animate-orbit { animation: orbit 24s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise-in, .animate-pop-in, .animate-draw-line, .animate-fill-bar, .animate-orbit { animation: none; }
 }
