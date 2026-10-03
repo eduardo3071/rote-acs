@@ -27,3 +27,4 @@ All colors, type sizes, spacing and radii are semantic tokens defined in `src/st
 ## RoteACS components and mock data
 
 Reusable app pieces (AppLogo, PrimaryButton, PageIndicator, IconContainer, OnboardingSlide, AppCard, RiskBadge) live in `src/components/`; screens compose them instead of restyling inline. Static content and mock data live in `src/data/` so a future backend can replace them without touching screens. Icons come from lucide-react only — emoji glyphs render inconsistently on cheap Android panels.
+- Mock session lives in `src/lib/session.ts` (localStorage, `getSession`/`saveSession`/`logout`) and family data in `src/data/families.ts` with derived scores — so a future backend swaps these modules without touching screens. `/dashboard` is a placeholder until FASE 4 replaces it.
