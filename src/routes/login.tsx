@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { PrimaryButton } from "@/components/PrimaryButton";
 import { LabelCaps } from "@/components/labels";
 
 export const Route = createFileRoute("/login")({
@@ -36,9 +36,9 @@ function LoginScreen() {
             próxima etapa do app.
           </p>
         </div>
-        <Button block size="lg" onClick={() => navigate({ to: "/onboarding" })}>
+        <PrimaryButton onClick={() => navigate({ to: "/onboarding" })}>
           Voltar ao início
-        </Button>
+        </PrimaryButton>
       </div>
     </div>
   );
