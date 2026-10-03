@@ -21,7 +21,7 @@ export function DashboardHeader({
             {firstName.charAt(0).toUpperCase()}
           </span>
           <span className="truncate text-small text-muted-foreground">
-            {session.agentCode} · <span className="capitalize">{date}</span>
+            {session.agentCode} · {date.charAt(0).toUpperCase() + date.slice(1)}
           </span>
         </div>
         <div className="flex shrink-0 gap-2">

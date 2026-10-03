@@ -15,7 +15,7 @@ export function TerritoryRiskChart({ counts, total }: { counts: Record<RiskLevel
     .filter((l) => counts[l] > 0)
     .map((l) => {
       const len = (counts[l] / Math.max(total, 1)) * 100;
-      const seg = { l, start, len: Math.max(len - GAP, 0.6) };
+      const seg = { l, start, len: Math.max(len - GAP, 2.5) };
       start += len;
       return seg;
     });
