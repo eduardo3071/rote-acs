@@ -4,7 +4,7 @@
  * A future backend can replace this module without touching screens.
  */
 
-export type WaterSource = "well" | "river" | "tap";
+export type WaterSource = "well" | "river" | "tap" | "other";
 
 export interface Family {
   id: string;
@@ -31,6 +31,7 @@ export const waterSourceLabels: Record<WaterSource, string> = {
   well: "Poço",
   river: "Rio",
   tap: "Torneira",
+  other: "Outra",
 };
 
 const DAY_MS = 86_400_000;

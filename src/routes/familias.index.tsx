@@ -5,7 +5,7 @@ import { FamilySearch } from "@/components/families/FamilySearch";
 import { RiskFilter } from "@/components/families/RiskFilter";
 import { FamilyRiskCard } from "@/components/families/FamilyRiskCard";
 import { useAgentSession } from "@/lib/useAgentSession";
-import { getFamiliesSortedByRisk } from "@/data/families";
+import { useFamilies } from "@/lib/territory";
 import { countByLevel, matchesFilter, type RiskFilterValue } from "@/lib/risk";
 
 export const Route = createFileRoute("/familias/")({
@@ -26,7 +26,8 @@ function FamiliesList() {
   const session = useAgentSession();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RiskFilterValue>("all");
-  const all = useMemo(() => getFamiliesSortedByRisk(), []);
+  const families = useFamilies();
+  const all = useMemo(() => [...families].sort((a, b) => b.riskScore - a.riskScore), [families]);
 
   const searched = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("pt-BR");
