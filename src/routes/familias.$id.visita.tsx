@@ -1,9 +1,9 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, Check, CheckCircle2, Minus, Plus, Users } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, CheckCircle2, Loader2, Minus, Plus, Users } from "lucide-react";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { getFamilyById, waterSourceLabels, type WaterSource } from "@/data/families";
-import { registerVisit } from "@/lib/territory";
+import { confirmVisit, useFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +29,7 @@ export const Route = createFileRoute("/familias/$id/visita")({
   component: VisitFlow,
 });
 
-const SOURCES: WaterSource[] = ["well", "river", "tap", "other"];
+const SOURCES: WaterSource[] = ["well", "river", "igarape", "tap", "other"];
 
 function Stepper({ step }: { step: number }) {
   return (
@@ -53,7 +53,8 @@ function Stepper({ step }: { step: number }) {
 }
 
 function VisitFlow() {
-  const { family } = Route.useLoaderData();
+  const { family: initial } = Route.useLoaderData();
+  const family = useFamily(initial.id) ?? initial;
   useAgentSession();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -61,13 +62,23 @@ function VisitFlow() {
   const [water, setWater] = useState<WaterSource | null>(null);
   const [children, setChildren] = useState(family.childrenUnder5);
   const [raised, setRaised] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const reset = () => { setStep(1); setSymptoms(null); setWater(null); setChildren(family.childrenUnder5); setRaised(null); };
-  const confirm = () => {
-    if (symptoms === null || !water) return;
-    const n = registerVisit(family.id, { symptoms, waterSource: water, childrenUnder5: children });
-    if (symptoms) navigate({ to: "/familias/$id/protocolo", params: { id: family.id }, search: { vizinhos: n } });
-    else setRaised(n);
+  const reset = () => { setStep(1); setSymptoms(null); setWater(null); setChildren(family.childrenUnder5); setRaised(null); setError(null); };
+  const confirm = async () => {
+    if (symptoms === null || !water || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const n = await confirmVisit(family.id, { symptoms, waterSource: water, childrenUnder5: children });
+      if (symptoms) navigate({ to: "/familias/$id/protocolo", params: { id: family.id }, search: { vizinhos: n } });
+      else setRaised(n);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não foi possível salvar a visita. Tente novamente.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (raised !== null) {
@@ -78,7 +89,7 @@ function VisitFlow() {
             <CheckCircle2 className="size-10 text-risk-low" aria-hidden />
           </span>
           <h1 className="text-display font-bold text-foreground">Visita registrada</h1>
-          <p className="text-body text-muted-foreground">Dados salvos no dispositivo.</p>
+          <p className="text-body text-muted-foreground">Dados salvos no banco.</p>
           {raised > 0 && (
             <p className="flex items-center gap-2 rounded-lg border border-risk-high/40 bg-risk-high/13 p-4 text-small font-semibold text-risk-high">
               <Users className="size-4 shrink-0" aria-hidden />
@@ -144,7 +155,14 @@ function VisitFlow() {
                 <Plus className="size-6" aria-hidden />
               </button>
             </div>
-            <PrimaryButton onClick={confirm}>Confirmar visita</PrimaryButton>
+            {error && (
+              <p role="alert" className="flex items-center gap-2 text-small text-risk-high">
+                <AlertCircle className="size-4 shrink-0" aria-hidden /> {error}
+              </p>
+            )}
+            <PrimaryButton onClick={confirm} disabled={submitting}>
+              {submitting ? <><Loader2 className="!size-5 animate-spin" aria-hidden /> Salvando…</> : "Confirmar visita"}
+            </PrimaryButton>
           </section>
         )}
       </div>

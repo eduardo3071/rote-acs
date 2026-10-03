@@ -1,7 +1,8 @@
 /**
- * Local territory store: Supabase-backed families (with a mock/offline cache fallback)
- * plus visit overrides persisted in localStorage. Screens only use
- * useFamilies/useFamily/registerVisit; a future backend swaps the fetch layer only.
+ * Local territory store: Supabase-backed families (with a mock/offline cache fallback).
+ * Visits are persisted to Supabase and the RiskScore/cluster propagation is recalculated
+ * server-side by the `recalculate-risk` Edge Function (see Fase 12). Screens only use
+ * useFamilies/useFamily/confirmVisit; a future backend swaps the fetch layer only.
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,10 +18,14 @@ import {
 
 const KEY = "roteacs.territory";
 const EVENT = "roteacs:territory";
-const NEIGHBOR_RADIUS_M = 200;
-const HIGH_PRIORITY_FLOOR = 70;
+const REMOTE_REFRESH_EVENT = "roteacs:families-remote-refresh";
 const LOG_KEY = "roteacs.visits";
 const FAMILIES_CACHE_KEY = "roteacs_families_cache";
+
+/** Tells every mounted useFamilies/useFamily hook to refetch from Supabase. */
+function notifyFamiliesChanged() {
+  window.dispatchEvent(new Event(REMOTE_REFRESH_EVENT));
+}
 
 // ---------- Supabase-backed families, with local cache fallback ----------
 
@@ -150,8 +155,6 @@ export function distanceMeters(a: Pick<Family, "latitude" | "longitude">, b: Pic
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-export const isWithinRadius = (a: Family, b: Family, radius = NEIGHBOR_RADIUS_M) => distanceMeters(a, b) < radius;
-
 function read(): Overrides {
   if (typeof window === "undefined") return {};
   try {
@@ -183,32 +186,35 @@ export interface VisitInput {
   childrenUnder5: number;
 }
 
-/** Saves the visit; on symptoms, raises neighbours (<200 m, same water) to high priority. Returns their count. */
-export function registerVisit(id: string, v: VisitInput): number {
-  const overrides = read();
-  const current = getFamilies(overrides);
-  const visited = current.find((f) => f.id === id);
-  if (!visited) return 0;
-  overrides[id] = {
-    ...overrides[id],
-    lastVisit: new Date().toISOString(),
-    giSymptoms: v.symptoms,
-    feverSymptoms: v.symptoms,
-    waterSource: v.waterSource,
-    childrenUnder5: Math.max(0, v.childrenUnder5),
-  };
-  let raised = 0;
-  if (v.symptoms) {
-    const updated = { ...visited, waterSource: v.waterSource };
-    for (const f of current) {
-      if (f.id === id || f.waterSource !== v.waterSource || !isWithinRadius(updated, f)) continue;
-      overrides[f.id] = { ...overrides[f.id], clusterRisk: true, riskFloor: HIGH_PRIORITY_FLOOR };
-      raised++;
-    }
-  }
-  write(overrides);
-  logVisit({ familyId: id, at: new Date().toISOString(), ...v, neighboursRaised: raised });
-  return raised;
+/**
+ * Persists a visit to Supabase, then calls the `recalculate-risk` Edge Function to
+ * recompute the family's RiskScore and propagate priority to neighbours (<200 m, same
+ * water source, GI symptom). Returns the number of neighbouring families affected.
+ */
+export async function confirmVisit(familyId: string, v: VisitInput): Promise<number> {
+  const session = await getSession();
+  if (!session) throw new Error("Sessão expirada. Faça login novamente.");
+
+  const visitedAt = new Date().toISOString();
+  const { error: insertError } = await supabase.from("visits").insert({
+    family_id: familyId,
+    acs_id: session.acsId,
+    visited_at: visitedAt,
+    gi_symptom: v.symptoms,
+    water_source: v.waterSource,
+    children_under5: Math.max(0, v.childrenUnder5),
+  });
+  if (insertError) throw insertError;
+
+  const { data, error: fnError } = await supabase.functions.invoke<{ affected: number }>("recalculate-risk", {
+    body: { family_id: familyId },
+  });
+  if (fnError) throw fnError;
+
+  const affected = data?.affected ?? 0;
+  logVisit({ familyId, at: visitedAt, ...v, neighboursRaised: affected, synced: true });
+  notifyFamiliesChanged();
+  return affected;
 }
 
 /**
@@ -217,6 +223,7 @@ export function registerVisit(id: string, v: VisitInput): number {
  */
 export function useFamilies(): Family[] {
   const [base, setBase] = useState<Family[]>(mockFamilies);
+  const [remoteTick, setRemoteTick] = useState(0);
   useEffect(() => {
     let active = true;
     loadRemoteFamilies().then((families) => {
@@ -225,6 +232,11 @@ export function useFamilies(): Family[] {
     return () => {
       active = false;
     };
+  }, [remoteTick]);
+  useEffect(() => {
+    const onRemoteRefresh = () => setRemoteTick((t) => t + 1);
+    window.addEventListener(REMOTE_REFRESH_EVENT, onRemoteRefresh);
+    return () => window.removeEventListener(REMOTE_REFRESH_EVENT, onRemoteRefresh);
   }, []);
 
   const [list, setList] = useState<Family[]>(mockFamilies);
@@ -244,6 +256,7 @@ export function useFamilies(): Family[] {
 /** Single family by id, fetched directly from Supabase with local overrides applied. */
 export function useFamily(id: string): Family | undefined {
   const [base, setBase] = useState<Family | undefined>(() => mockFamilies.find((f) => f.id === id));
+  const [remoteTick, setRemoteTick] = useState(0);
   useEffect(() => {
     let active = true;
     loadRemoteFamily(id).then((family) => {
@@ -252,7 +265,12 @@ export function useFamily(id: string): Family | undefined {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, remoteTick]);
+  useEffect(() => {
+    const onRemoteRefresh = () => setRemoteTick((t) => t + 1);
+    window.addEventListener(REMOTE_REFRESH_EVENT, onRemoteRefresh);
+    return () => window.removeEventListener(REMOTE_REFRESH_EVENT, onRemoteRefresh);
+  }, []);
 
   const [family, setFamily] = useState<Family | undefined>(base);
   useEffect(() => {
