@@ -9,7 +9,8 @@ import { PriorityFamilyCard } from "@/components/dashboard/PriorityFamilyCard";
 import { DashboardMetricCard } from "@/components/dashboard/DashboardMetricCard";
 import { logout } from "@/lib/session";
 import { useAgentSession } from "@/lib/useAgentSession";
-import { mockFamilies, daysSinceVisit, getFamiliesSortedByRisk } from "@/data/families";
+import { daysSinceVisit } from "@/data/families";
+import { useFamilies } from "@/lib/territory";
 import { countByLevel, priorityLabels, type RiskLevel } from "@/lib/risk";
 
 export const Route = createFileRoute("/dashboard")({
@@ -35,8 +36,9 @@ function Dashboard() {
 
   if (!session) return <div className="field-surface min-h-screen" />;
 
+  const mockFamilies = useFamilies();
   const counts = countByLevel(mockFamilies);
-  const top = getFamiliesSortedByRisk()[0];
+  const top = [...mockFamilies].sort((a, b) => b.riskScore - a.riskScore)[0];
   const visitedToday = mockFamilies.filter((f) => daysSinceVisit(f) === 0).length;
   const overdue = mockFamilies.filter((f) => daysSinceVisit(f) >= 30).length;
 
