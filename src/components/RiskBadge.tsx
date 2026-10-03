@@ -36,7 +36,9 @@ export const riskLabels: Record<RiskLevel, string> = {
 type RiskBadgeProps = Omit<React.ComponentPropsWithoutRef<"div">, "className"> &
   VariantProps<typeof riskBadgeVariants> & {
     /** Score from 0 to 100. Values outside the range are clamped. */
-    score: number;
+    score?: number;
+    /** Alias of `score` (spec name). */
+    riskScore?: number;
     className?: string;
     /** Overrides the visible text; defaults to the clamped score. */
     display?: string;
@@ -46,13 +48,14 @@ type RiskBadgeProps = Omit<React.ComponentPropsWithoutRef<"div">, "className"> &
 
 export function RiskBadge({
   score,
+  riskScore,
   level,
   className,
   display,
   label,
   ...props
 }: RiskBadgeProps) {
-  const value = clampScore(score);
+  const value = clampScore(riskScore ?? score ?? 0);
   const resolved = level ?? riskLevel(value);
 
   return (

@@ -23,3 +23,7 @@ All colors, type sizes, spacing and radii are semantic tokens defined in `src/st
 
 `/` is the splash (auto-advances to `/onboarding` after 2s); `/onboarding` ends on `/login`, which is a placeholder until the FASE 3 login screen exists. The FASE 1 design-system reference screen lives at `/design-system` — new app screens must not displace these routes; the login placeholder is the only file meant to be replaced.
 
+
+## RoteACS components and mock data
+
+Reusable app pieces (AppLogo, PrimaryButton, PageIndicator, IconContainer, OnboardingSlide, AppCard, RiskBadge) live in `src/components/`; screens compose them instead of restyling inline. Static content and mock data live in `src/data/` so a future backend can replace them without touching screens. Icons come from lucide-react only — emoji glyphs render inconsistently on cheap Android panels.
