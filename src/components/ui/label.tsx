@@ -1,21 +1,19 @@
-"use client";
-
 import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
-import { cva, type VariantProps } from "class-variance-authority";
-
 import { cn } from "@/lib/utils";
 
-const labelVariants = cva(
-  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-);
+/** 11px semibold, uppercase, tracked. Section header of the whole app. */
+export function LabelCaps({ className, ...props }: React.ComponentPropsWithoutRef<"span">) {
+  return <span className={cn("label-caps inline-flex items-center gap-2", className)} {...props} />;
+}
 
-const Label = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root> & VariantProps<typeof labelVariants>
->(({ className, ...props }, ref) => (
-  <LabelPrimitive.Root ref={ref} className={cn(labelVariants(), className)} {...props} />
-));
-Label.displayName = LabelPrimitive.Root.displayName;
-
-export { Label };
+export function Label({ className, ...props }: React.ComponentPropsWithoutRef<"span">) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-2 rounded-pill border border-border bg-elevated px-3 py-1 text-small text-ink-soft",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
