@@ -15,6 +15,8 @@ import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as FamiliasRouteImport } from './routes/familias'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
+import { Route as FamiliasIdRouteImport } from './routes/familias.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,31 +48,46 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FamiliasIndexRoute = FamiliasIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FamiliasRoute,
+} as any)
+const FamiliasIdRoute = FamiliasIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => FamiliasRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/design-system': typeof DesignSystemRoute
-  '/familias': typeof FamiliasRoute
+  '/familias': typeof FamiliasRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/familias/$id': typeof FamiliasIdRoute
+  '/familias/': typeof FamiliasIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/design-system': typeof DesignSystemRoute
-  '/familias': typeof FamiliasRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/familias/$id': typeof FamiliasIdRoute
+  '/familias': typeof FamiliasIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/design-system': typeof DesignSystemRoute
-  '/familias': typeof FamiliasRoute
+  '/familias': typeof FamiliasRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
+  '/familias/$id': typeof FamiliasIdRoute
+  '/familias/': typeof FamiliasIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,14 +98,17 @@ export interface FileRouteTypes {
     | '/familias'
     | '/login'
     | '/onboarding'
+    | '/familias/$id'
+    | '/familias/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
     | '/design-system'
-    | '/familias'
     | '/login'
     | '/onboarding'
+    | '/familias/$id'
+    | '/familias'
   id:
     | '__root__'
     | '/'
@@ -97,13 +117,15 @@ export interface FileRouteTypes {
     | '/familias'
     | '/login'
     | '/onboarding'
+    | '/familias/$id'
+    | '/familias/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   DesignSystemRoute: typeof DesignSystemRoute
-  FamiliasRoute: typeof FamiliasRoute
+  FamiliasRoute: typeof FamiliasRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
 }
@@ -152,14 +174,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/familias/': {
+      id: '/familias/'
+      path: '/'
+      fullPath: '/familias/'
+      preLoaderRoute: typeof FamiliasIndexRouteImport
+      parentRoute: typeof FamiliasRoute
+    }
+    '/familias/$id': {
+      id: '/familias/$id'
+      path: '/$id'
+      fullPath: '/familias/$id'
+      preLoaderRoute: typeof FamiliasIdRouteImport
+      parentRoute: typeof FamiliasRoute
+    }
   }
 }
+
+interface FamiliasRouteChildren {
+  FamiliasIdRoute: typeof FamiliasIdRoute
+  FamiliasIndexRoute: typeof FamiliasIndexRoute
+}
+
+const FamiliasRouteChildren: FamiliasRouteChildren = {
+  FamiliasIdRoute: FamiliasIdRoute,
+  FamiliasIndexRoute: FamiliasIndexRoute,
+}
+
+const FamiliasRouteWithChildren = FamiliasRoute._addFileChildren(
+  FamiliasRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   DesignSystemRoute: DesignSystemRoute,
-  FamiliasRoute: FamiliasRoute,
+  FamiliasRoute: FamiliasRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
 }

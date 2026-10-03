@@ -29,7 +29,7 @@ export function TerritoryRiskChart({ counts, total }: { counts: Record<RiskLevel
         {segments.map((s) => (
           <path key={s.l} d={arc} pathLength={100} fill="none" strokeWidth={10} strokeLinecap="butt"
             strokeDasharray={`${s.len} 100`} strokeDashoffset={-s.start}
-            className={`${stroke[s.l]} animate-draw-line`} style={{ strokeDasharray: `${s.len} 100` }} />
+            className={stroke[s.l]} />
         ))}
       </svg>
       <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
