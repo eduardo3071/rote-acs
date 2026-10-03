@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Flame, Eye, CheckCircle2, CalendarClock, ListOrdered, Map as MapIcon } from "lucide-react";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -86,8 +86,8 @@ function Dashboard() {
 
       <div className="fixed inset-x-0 bottom-0 bg-gradient-to-t from-background via-background to-transparent px-6 pb-6 pt-8">
         <div className="mx-auto max-w-md md:max-w-2xl">
-          <PrimaryButton asChild arrow={false}>
-            <Link to="/familias"><ListOrdered className="!size-5" aria-hidden /> Ver famílias prioritárias</Link>
+          <PrimaryButton arrow={false} onClick={() => navigate({ to: "/familias" })}>
+            <ListOrdered className="!size-5" aria-hidden /> Ver famílias prioritárias
           </PrimaryButton>
         </div>
       </div>
