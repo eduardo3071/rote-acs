@@ -136,7 +136,7 @@ function VisitFlow() {
                 className="flex size-14 items-center justify-center rounded-lg border border-border bg-elevated text-primary disabled:opacity-40">
                 <Minus className="size-6" aria-hidden />
               </button>
-              <span className="text-[3rem] font-bold leading-none text-foreground" aria-live="polite">{children}</span>
+              <span className="text-brand leading-none text-foreground" aria-live="polite">{children}</span>
               <button aria-label="Aumentar" onClick={() => setChildren((c) => c + 1)}
                 className="flex size-14 items-center justify-center rounded-lg border border-border bg-elevated text-primary">
                 <Plus className="size-6" aria-hidden />

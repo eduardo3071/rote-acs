@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
 import { Route as FamiliasIdRouteImport } from './routes/familias.$id'
+import { Route as FamiliasIdVisitaRouteImport } from './routes/familias.$id.visita'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,11 @@ const FamiliasIdRoute = FamiliasIdRouteImport.update({
   path: '/familias/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FamiliasIdVisitaRoute = FamiliasIdVisitaRouteImport.update({
+  id: '/visita',
+  path: '/visita',
+  getParentRoute: () => FamiliasIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,8 +65,9 @@ export interface FileRoutesByFullPath {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/familias/$id': typeof FamiliasIdRoute
+  '/familias/$id': typeof FamiliasIdRouteWithChildren
   '/familias/': typeof FamiliasIndexRoute
+  '/familias/$id/visita': typeof FamiliasIdVisitaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -68,8 +75,9 @@ export interface FileRoutesByTo {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/familias/$id': typeof FamiliasIdRoute
+  '/familias/$id': typeof FamiliasIdRouteWithChildren
   '/familias': typeof FamiliasIndexRoute
+  '/familias/$id/visita': typeof FamiliasIdVisitaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,8 +86,9 @@ export interface FileRoutesById {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/familias/$id': typeof FamiliasIdRoute
+  '/familias/$id': typeof FamiliasIdRouteWithChildren
   '/familias/': typeof FamiliasIndexRoute
+  '/familias/$id/visita': typeof FamiliasIdVisitaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/familias/$id'
     | '/familias/'
+    | '/familias/$id/visita'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/familias/$id'
     | '/familias'
+    | '/familias/$id/visita'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/familias/$id'
     | '/familias/'
+    | '/familias/$id/visita'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -117,7 +129,7 @@ export interface RootRouteChildren {
   DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
-  FamiliasIdRoute: typeof FamiliasIdRoute
+  FamiliasIdRoute: typeof FamiliasIdRouteWithChildren
   FamiliasIndexRoute: typeof FamiliasIndexRoute
 }
 
@@ -172,8 +184,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FamiliasIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/familias/$id/visita': {
+      id: '/familias/$id/visita'
+      path: '/visita'
+      fullPath: '/familias/$id/visita'
+      preLoaderRoute: typeof FamiliasIdVisitaRouteImport
+      parentRoute: typeof FamiliasIdRoute
+    }
   }
 }
+
+interface FamiliasIdRouteChildren {
+  FamiliasIdVisitaRoute: typeof FamiliasIdVisitaRoute
+}
+
+const FamiliasIdRouteChildren: FamiliasIdRouteChildren = {
+  FamiliasIdVisitaRoute: FamiliasIdVisitaRoute,
+}
+
+const FamiliasIdRouteWithChildren = FamiliasIdRoute._addFileChildren(
+  FamiliasIdRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -181,7 +212,7 @@ const rootRouteChildren: RootRouteChildren = {
   DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
-  FamiliasIdRoute: FamiliasIdRoute,
+  FamiliasIdRoute: FamiliasIdRouteWithChildren,
   FamiliasIndexRoute: FamiliasIndexRoute,
 }
 export const routeTree = rootRouteImport
