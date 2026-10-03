@@ -9,15 +9,12 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
----
-name: shadcn ui files are shared template files
-description: Extend src/components/ui shadcn files in place instead of replacing them, because other template components import their exact exports
-type: constraint
----
-Files under `src/components/ui/` come from the shadcn template and are imported by sibling components (`pagination.tsx` imports `ButtonProps`, `form.tsx`/`sidebar.tsx`/`calendar.tsx`/`carousel.tsx` pass `ref` to `Button` and `Label`).
+# RoteACS
 
-Rule: when a RoteACS base component overlaps an existing `ui/` file, extend that file in place — keep its exported names, its `forwardRef` signature and its existing variant/size keys, adding new ones alongside. Never overwrite it with a fresh implementation, and never add a second button-like component to avoid editing it.
+## Shared template components
 
-Why: overwriting `ui/button.tsx` or `ui/label.tsx` with a custom version silently broke seven unrelated template components (typecheck failures on `ref` and on the missing `ButtonProps` export) while the new screen itself still looked fine.
+Files under `src/components/ui/` come from the shadcn template and are imported by sibling components (`pagination.tsx` imports `ButtonProps`; `form.tsx`, `sidebar.tsx`, `calendar.tsx` and `carousel.tsx` pass `ref` to `Button` and `Label`). Extend such a file in place when RoteACS needs new looks — keep its exported names, its `forwardRef` signature and its existing variant/size keys, adding new ones alongside — and put RoteACS-specific components with no shadcn counterpart outside `ui/` (e.g. `src/components/RiskBadge.tsx`, `src/components/labels.tsx`). Replacing one of these files with a fresh implementation silently breaks the components that import it, while the new screen itself still looks fine.
 
-RoteACS-specific components that have no shadcn counterpart live outside `ui/` (e.g. `src/components/RiskBadge.tsx`, `src/components/labels.tsx`).
+## Design tokens
+
+All colors, type sizes, spacing and radii are semantic tokens defined in `src/styles.css`; components reference them through Tailwind utilities or shadcn variants and never hardcode a hex or an arbitrary color class. New screens import the same tokens rather than restating any value, so the FASE 1 identity stays the single source of truth.
