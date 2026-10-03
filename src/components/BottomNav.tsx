@@ -15,7 +15,7 @@ export function BottomNav() {
         {TABS.map(({ to, label, icon: Icon }) => (
           <li key={to}>
             <Link to={to} activeOptions={{ exact: to !== "/familias" }}
-              className="flex h-full flex-col items-center justify-center gap-1 text-label font-semibold text-muted-foreground"
+              className="flex h-full flex-col items-center justify-center gap-1 text-label font-semibold text-ink-faint"
               activeProps={{ className: "!text-primary", "aria-current": "page" }}>
               <Icon className="size-6" aria-hidden />
               {label}

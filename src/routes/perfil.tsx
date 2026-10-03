@@ -95,7 +95,7 @@ function ProfilePage() {
           </span>
           <h1 className="text-title font-bold text-foreground">{session.name}</h1>
           <p className="text-body text-muted-foreground">Agente Comunitário de Saúde</p>
-          <p className="text-small text-subtle">Território: Comunidade Wanjiku · Kenya</p>
+          <p className="text-small text-ink-faint">Território: Comunidade Wanjiku · Kenya</p>
         </header>
 
         <section className="flex flex-col gap-4 rounded-md border border-border bg-card p-4">
