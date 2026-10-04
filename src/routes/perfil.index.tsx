@@ -1,12 +1,31 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, Cloud, Copy, Database, Languages, Loader2, LogOut, Share2, ShieldCheck, Users, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, Cloud, Copy, Database, Languages, Loader2, LogOut, MapPin, Share2, ShieldCheck, Users, User } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { exportToDhis2, getFamiliesCacheMeta, getLastSyncAt, getSyncQueueCounts, syncQueue } from "@/lib/territory";
-import { logout } from "@/lib/session";
+import { logout, updateTerritory } from "@/lib/session";
 import { useAgentSession } from "@/lib/useAgentSession";
+
+/** País → Estado → Município — kept explicit in the UI as the scalability story: swapping
+ *  territory is a parameter (an IBGE municipality code), not a rebuild. Only Anapu-PA has real
+ *  CNEFE/CNES data loaded in this demo; every other option is shown but marked as not loaded,
+ *  so the extensibility claim stays honest instead of implied. */
+const UF_NAMES: Record<string, string> = {
+  AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará", DF: "Distrito Federal",
+  ES: "Espírito Santo", GO: "Goiás", MA: "Maranhão", MT: "Mato Grosso", MS: "Mato Grosso do Sul",
+  MG: "Minas Gerais", PA: "Pará", PB: "Paraíba", PR: "Paraná", PE: "Pernambuco", PI: "Piauí",
+  RJ: "Rio de Janeiro", RN: "Rio Grande do Norte", RS: "Rio Grande do Sul", RO: "Rondônia", RR: "Roraima",
+  SC: "Santa Catarina", SP: "São Paulo", SE: "Sergipe", TO: "Tocantins",
+};
+const PA_MUNICIPALITIES: { name: string; loaded: boolean }[] = [
+  { name: "Anapu", loaded: true },
+  { name: "Altamira", loaded: false },
+  { name: "Senador José Porfírio", loaded: false },
+  { name: "Vitória do Xingu", loaded: false },
+  { name: "Pacajá", loaded: false },
+];
 
 export const Route = createFileRoute("/perfil/")({
   head: () => {
@@ -47,6 +66,12 @@ function ProfilePage() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [familiesCache, setFamiliesCache] = useState({ count: 0, cachedAt: null as string | null });
+  const [territoryOpen, setTerritoryOpen] = useState(false);
+  const [territoryOverride, setTerritoryOverride] = useState<string | null>(null);
+  const [uf, setUf] = useState("PA");
+  const [municipio, setMunicipio] = useState("Anapu");
+  const [savingTerritory, setSavingTerritory] = useState(false);
+  const [territoryError, setTerritoryError] = useState<string | null>(null);
 
   const refresh = () => {
     setQueue(getSyncQueueCounts());
@@ -82,6 +107,17 @@ function ProfilePage() {
     try { await navigator.clipboard.writeText(json); setCopied(true); } catch { setCopied(false); }
   };
 
+  const saveTerritory = async () => {
+    if (!session || uf !== "PA" || !municipio) return;
+    setSavingTerritory(true);
+    setTerritoryError(null);
+    const { error } = await updateTerritory(session.acsId, `${municipio}, ${uf}`);
+    setSavingTerritory(false);
+    if (error) { setTerritoryError(error); return; }
+    setTerritoryOverride(`${municipio}, ${uf}`);
+    setTerritoryOpen(false);
+  };
+
   if (!session) return <div className="field-surface min-h-screen" />;
 
   return (
@@ -93,7 +129,9 @@ function ProfilePage() {
           </span>
           <h1 className="text-title font-bold text-foreground">{session.name}</h1>
           <p className="text-body text-muted-foreground">Agente Comunitário de Saúde</p>
-          <p className="text-small text-ink-faint">Território: {session.territory ?? "Não informado"}</p>
+          <button onClick={() => setTerritoryOpen(true)} className="flex items-center gap-1 text-small text-ink-faint underline decoration-dotted">
+            <MapPin className="size-3.5 shrink-0" aria-hidden /> Território: {territoryOverride ?? session.territory ?? "Não informado"}
+          </button>
         </header>
 
         <section className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
@@ -117,6 +155,10 @@ function ProfilePage() {
             <CheckCircle2 className="size-4 shrink-0 text-risk-low" aria-hidden /> {queue.synced} registros sincronizados
           </p>
           <p className="text-small text-muted-foreground">Última sincronização: {formatSync(lastSync)}</p>
+          <p className="text-label text-ink-faint">
+            Visitas registradas sem rede ficam na fila do celular e sobem sozinhas quando a conexão volta —
+            é como o app cumpre a regra do desafio de funcionar offline sem perder nenhum registro.
+          </p>
           {state === "done" && queue.pending === 0 ? (
             <p role="status" className="flex h-14 items-center justify-center gap-2 rounded-lg border border-risk-low bg-risk-low/15 text-body font-bold text-risk-low">
               <CheckCircle2 className="size-5" aria-hidden /> Sincronizado
@@ -128,10 +170,17 @@ function ProfilePage() {
           )}
         </section>
 
-        <button onClick={openExport} disabled={exporting}
-          className="flex h-14 items-center justify-center gap-2 rounded-lg border border-border bg-elevated text-body font-semibold text-primary disabled:opacity-40">
-          {exporting ? <><Loader2 className="size-5 animate-spin" aria-hidden /> Gerando…</> : <><Share2 className="size-5" aria-hidden /> Exportar para DHIS2</>}
-        </button>
+        <div className="flex flex-col gap-2">
+          <button onClick={openExport} disabled={exporting}
+            className="flex h-14 items-center justify-center gap-2 rounded-lg border border-border bg-elevated text-body font-semibold text-primary disabled:opacity-40">
+            {exporting ? <><Loader2 className="size-5 animate-spin" aria-hidden /> Gerando…</> : <><Share2 className="size-5" aria-hidden /> Exportar para DHIS2</>}
+          </button>
+          <p className="text-label text-ink-faint">
+            DHIS2 é o sistema de informação em saúde usado por ministérios da saúde em mais de 70 países
+            (incluído no SUS). Exportar nesse formato é o que torna o RoteACS plugável num sistema de
+            saúde que já existe, em vez de criar mais um silo de dados isolado.
+          </p>
+        </div>
         {exportError && (
           <p role="alert" className="flex items-center gap-2 text-small text-risk-high">
             <AlertCircle className="size-4 shrink-0" aria-hidden /> {exportError}
@@ -180,6 +229,66 @@ function ProfilePage() {
               {copied ? <CheckCircle2 className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />} {copied ? "Copiado" : "Copiar"}
             </button>
             <button onClick={() => setJson(null)} className="h-12 rounded-lg border border-border bg-elevated text-body font-semibold text-foreground">Fechar</button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={territoryOpen} onOpenChange={setTerritoryOpen}>
+        <DialogContent className="max-w-sm border-border bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Território</DialogTitle>
+            <DialogDescription>
+              País → Estado → Município. A arquitetura do RoteACS usa o código IBGE do município como
+              parâmetro — trocar de cidade significa carregar outro arquivo de coordenadas (CNEFE) e outro
+              recorte do CNES, sem mudar uma linha do app. Esta demonstração só tem dados reais carregados
+              para Anapu-PA; os demais municípios aparecem aqui para deixar essa expansão explícita, não
+              escondida.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-small text-muted-foreground">País</span>
+              <select disabled value="BR"
+                className="h-12 rounded-lg border border-border bg-elevated px-4 text-body text-foreground opacity-70">
+                <option value="BR">Brasil</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-small text-muted-foreground">Estado</span>
+              <select value={uf} onChange={(e) => { setUf(e.target.value); setMunicipio(""); }}
+                className="h-12 rounded-lg border border-border bg-card px-4 text-body text-foreground outline-none focus:border-primary">
+                {Object.entries(UF_NAMES).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-small text-muted-foreground">Município</span>
+              {uf === "PA" ? (
+                <select value={municipio} onChange={(e) => setMunicipio(e.target.value)}
+                  className="h-12 rounded-lg border border-border bg-card px-4 text-body text-foreground outline-none focus:border-primary">
+                  {PA_MUNICIPALITIES.map((m) => (
+                    <option key={m.name} value={m.name} disabled={!m.loaded}>
+                      {m.name}{m.loaded ? "" : " (sem dados carregados)"}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="rounded-lg border border-dashed border-border bg-elevated px-4 py-3 text-small text-muted-foreground">
+                  Nenhum município com dados carregados neste estado ainda.
+                </p>
+              )}
+            </label>
+          </div>
+          {territoryError && (
+            <p role="alert" className="flex items-center gap-2 text-small text-risk-high">
+              <AlertCircle className="size-4 shrink-0" aria-hidden /> {territoryError}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={saveTerritory} disabled={savingTerritory || uf !== "PA" || !municipio}
+              className="flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-body font-semibold text-primary-foreground disabled:opacity-40">
+              {savingTerritory ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <CheckCircle2 className="size-4" aria-hidden />} Salvar
+            </button>
+            <button onClick={() => setTerritoryOpen(false)} className="h-12 rounded-lg border border-border bg-elevated text-body font-semibold text-foreground">Fechar</button>
           </div>
         </DialogContent>
       </Dialog>

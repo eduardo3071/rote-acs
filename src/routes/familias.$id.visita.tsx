@@ -505,10 +505,16 @@ function VisitFlow() {
           <section key="reason" className="flex flex-col gap-4 animate-rise-in">
             <h1 className="text-center text-subtitle font-bold text-foreground">Qual o motivo da visita?</h1>
             {isVoiceSupported() && conversationMode !== "running" && (
-              <button type="button" onClick={runConversation}
-                className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-primary bg-primary/10 text-body font-bold text-primary">
-                <Mic className="size-5" aria-hidden /> Iniciar entrevista por voz
-              </button>
+              <div className="flex flex-col gap-1">
+                <button type="button" onClick={runConversation}
+                  className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-primary bg-primary/10 text-body font-bold text-primary">
+                  <Mic className="size-5" aria-hidden /> Iniciar entrevista por voz
+                  <span className="rounded-pill border border-primary/40 bg-primary/15 px-2 py-0.5 text-label font-semibold text-primary">IA on-device</span>
+                </button>
+                <p className="text-center text-label text-muted-foreground">
+                  Reconhece sua resposta no próprio celular, sem internet — mais rápido que digitar com as mãos ocupadas em campo.
+                </p>
+              </div>
             )}
             <div className="grid grid-cols-2 gap-2">
               {REASONS.map(({ id, label, icon: Icon }) => (
