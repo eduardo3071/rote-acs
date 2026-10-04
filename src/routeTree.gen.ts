@@ -14,8 +14,9 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
+import { Route as PerfilIndexRouteImport } from './routes/perfil.index'
+import { Route as PerfilDadosRouteImport } from './routes/perfil.dados'
 import { Route as FamiliasIdIndexRouteImport } from './routes/familias.$id.index'
 import { Route as FamiliasIdProtocoloRouteImport } from './routes/familias.$id.protocolo'
 import { Route as FamiliasIdVisitaRouteImport } from './routes/familias.$id.visita'
@@ -45,14 +46,19 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PerfilRoute = PerfilRouteImport.update({
-  id: '/perfil',
-  path: '/perfil',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const FamiliasIndexRoute = FamiliasIndexRouteImport.update({
   id: '/familias/',
   path: '/familias/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilIndexRoute = PerfilIndexRouteImport.update({
+  id: '/perfil/',
+  path: '/perfil/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilDadosRoute = PerfilDadosRouteImport.update({
+  id: '/perfil/dados',
+  path: '/perfil/dados',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FamiliasIdIndexRoute = FamiliasIdIndexRouteImport.update({
@@ -77,8 +83,9 @@ export interface FileRoutesByFullPath {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/perfil': typeof PerfilRoute
+  '/perfil/dados': typeof PerfilDadosRoute
   '/familias/': typeof FamiliasIndexRoute
+  '/perfil/': typeof PerfilIndexRoute
   '/familias/$id/protocolo': typeof FamiliasIdProtocoloRoute
   '/familias/$id/visita': typeof FamiliasIdVisitaRoute
   '/familias/$id/': typeof FamiliasIdIndexRoute
@@ -89,8 +96,9 @@ export interface FileRoutesByTo {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/perfil': typeof PerfilRoute
+  '/perfil/dados': typeof PerfilDadosRoute
   '/familias': typeof FamiliasIndexRoute
+  '/perfil': typeof PerfilIndexRoute
   '/familias/$id/protocolo': typeof FamiliasIdProtocoloRoute
   '/familias/$id/visita': typeof FamiliasIdVisitaRoute
   '/familias/$id': typeof FamiliasIdIndexRoute
@@ -102,8 +110,9 @@ export interface FileRoutesById {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/perfil': typeof PerfilRoute
+  '/perfil/dados': typeof PerfilDadosRoute
   '/familias/': typeof FamiliasIndexRoute
+  '/perfil/': typeof PerfilIndexRoute
   '/familias/$id/protocolo': typeof FamiliasIdProtocoloRoute
   '/familias/$id/visita': typeof FamiliasIdVisitaRoute
   '/familias/$id/': typeof FamiliasIdIndexRoute
@@ -116,8 +125,9 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/login'
     | '/onboarding'
-    | '/perfil'
+    | '/perfil/dados'
     | '/familias/'
+    | '/perfil/'
     | '/familias/$id/protocolo'
     | '/familias/$id/visita'
     | '/familias/$id/'
@@ -128,8 +138,9 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/login'
     | '/onboarding'
-    | '/perfil'
+    | '/perfil/dados'
     | '/familias'
+    | '/perfil'
     | '/familias/$id/protocolo'
     | '/familias/$id/visita'
     | '/familias/$id'
@@ -140,8 +151,9 @@ export interface FileRouteTypes {
     | '/design-system'
     | '/login'
     | '/onboarding'
-    | '/perfil'
+    | '/perfil/dados'
     | '/familias/'
+    | '/perfil/'
     | '/familias/$id/protocolo'
     | '/familias/$id/visita'
     | '/familias/$id/'
@@ -153,8 +165,9 @@ export interface RootRouteChildren {
   DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
-  PerfilRoute: typeof PerfilRoute
+  PerfilDadosRoute: typeof PerfilDadosRoute
   FamiliasIndexRoute: typeof FamiliasIndexRoute
+  PerfilIndexRoute: typeof PerfilIndexRoute
   FamiliasIdProtocoloRoute: typeof FamiliasIdProtocoloRoute
   FamiliasIdVisitaRoute: typeof FamiliasIdVisitaRoute
   FamiliasIdIndexRoute: typeof FamiliasIdIndexRoute
@@ -197,18 +210,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/perfil': {
-      id: '/perfil'
-      path: '/perfil'
-      fullPath: '/perfil'
-      preLoaderRoute: typeof PerfilRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/familias/': {
       id: '/familias/'
       path: '/familias'
       fullPath: '/familias/'
       preLoaderRoute: typeof FamiliasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil/': {
+      id: '/perfil/'
+      path: '/perfil'
+      fullPath: '/perfil/'
+      preLoaderRoute: typeof PerfilIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil/dados': {
+      id: '/perfil/dados'
+      path: '/perfil/dados'
+      fullPath: '/perfil/dados'
+      preLoaderRoute: typeof PerfilDadosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/familias/$id/': {
@@ -241,8 +261,9 @@ const rootRouteChildren: RootRouteChildren = {
   DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
-  PerfilRoute: PerfilRoute,
+  PerfilDadosRoute: PerfilDadosRoute,
   FamiliasIndexRoute: FamiliasIndexRoute,
+  PerfilIndexRoute: PerfilIndexRoute,
   FamiliasIdProtocoloRoute: FamiliasIdProtocoloRoute,
   FamiliasIdVisitaRoute: FamiliasIdVisitaRoute,
   FamiliasIdIndexRoute: FamiliasIdIndexRoute,
@@ -250,13 +271,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

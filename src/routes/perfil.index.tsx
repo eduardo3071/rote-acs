@@ -8,7 +8,7 @@ import { exportToDhis2, getFamiliesCacheMeta, getLastSyncAt, getSyncQueueCounts,
 import { logout } from "@/lib/session";
 import { useAgentSession } from "@/lib/useAgentSession";
 
-export const Route = createFileRoute("/perfil")({
+export const Route = createFileRoute("/perfil/")({
   head: () => {
     const t = "Perfil e sincronização — RoteACS";
     const d = "Dados do agente, registros aguardando envio, exportação DHIS2 e configurações.";
