@@ -44,10 +44,10 @@ const DATASETS: DatasetRow[] = [
   },
   {
     name: "Reconhecimento de voz em português",
-    source: "Web Speech API (serviço nativo do navegador)",
-    license: "Serviço do fornecedor do navegador — não é um dataset aberto",
-    covers: "Frases curtas de vocabulário fechado (sim/não, nomes de fonte de água, números de 0 a 10, palavras-chave de sintomas) em português.",
-    doesNotCover: "Hoje não é 100% on-device — depende de rede para transcrever (o resto do app continua offline-first). Acurácia em sotaques regionais não foi medida. Não transcreve frases livres longas — por desenho, não por limitação não intencional.",
+    source: "Vosk (vosk-model-small-pt-0.3, ~31 MB) rodando on-device via WebAssembly",
+    license: "Apache 2.0 (modelo) — sem dependência de servidor para transcrever",
+    covers: "Frases curtas de vocabulário fechado (sim/não, nomes de fonte de água, números de 0 a 10, palavras-chave de sintomas, motivo da visita) em português, incluindo o Modo Conversa (app fala a pergunta, agente responde por voz). Modelo baixado uma vez e guardado no celular — depois disso, funciona sem internet.",
+    doesNotCover: "Acurácia em sotaques regionais ainda não foi medida, e o funcionamento em um celular Android real ainda não foi validado fora do ambiente de desenvolvimento. Se o modelo não carregar (ex.: sem rede no primeiro uso), o app cai automaticamente para a Web Speech API do navegador, que aí sim depende de rede — nunca quebra a demonstração, mas deixa de ser on-device nesse caso de exceção.",
   },
   {
     name: "Identidade de famílias e histórico de visitas",
@@ -108,9 +108,16 @@ function DataSourcesPage() {
           </h2>
           <p className="text-small text-foreground">
             O RiskScore é uma fórmula explicável (dias desde a última visita, sintomas, crianças pequenas,
-            vacinação, risco de cluster) — não é uma caixa-preta. O componente de IA é o reconhecimento
-            de voz: cada pergunta da visita tem um vocabulário fechado (ex.: "sim"/"não", nomes de fonte de
-            água, números), o que torna o reconhecimento um problema bem definido, não transcrição livre.
+            vacinação, risco de cluster) — não é uma caixa-preta e não usa IA. O componente de IA é o
+            reconhecimento de voz: um modelo pequeno (Vosk) rodando no próprio celular, com vocabulário
+            fechado por pergunta (ex.: "sim"/"não", nomes de fonte de água, números), o que torna o
+            reconhecimento um problema de pattern recognition bem definido, não transcrição livre.
+          </p>
+          <p className="text-small text-foreground">
+            No "Modo Conversa" (registro de visita), o app faz cada pergunta em voz alta e escuta a
+            resposta, avançando sozinho — sem precisar tocar na tela entre perguntas. Se uma resposta não
+            for entendida duas vezes seguidas, o app pausa naquela pergunta e devolve o controle para os
+            botões de toque, que sempre continuam disponíveis.
           </p>
           <p className="text-small text-muted-foreground">
             A voz é sempre opcional — toda pergunta também tem botões de toque, para nunca excluir quem não
@@ -128,6 +135,7 @@ function DataSourcesPage() {
             <li>• Sinais de desidratação disparam um alerta de encaminhamento — o app nunca tenta resolver um caso grave sozinho.</li>
             <li>• Dados de cada família ficam restritos ao próprio agente no banco (Row Level Security).</li>
             <li>• O cache local no celular não é criptografado — limitação conhecida, declarada aqui, não escondida.</li>
+            <li>• Com o modelo Vosk, o áudio é processado no celular e descartado na hora — nada é gravado ou enviado a servidor. Só no modo de reserva (Web Speech API, quando o Vosk não carrega) o áudio sai do aparelho para o serviço de transcrição do navegador.</li>
           </ul>
         </section>
 
