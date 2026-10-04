@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { syncQueue } from "../lib/territory";
 import { useLocale } from "../lib/i18n";
+import { LanguageToggle } from "../components/LanguageToggle";
 
 function NotFoundComponent() {
   return (
@@ -167,6 +168,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <LanguageToggle />
     </QueryClientProvider>
   );
 }
