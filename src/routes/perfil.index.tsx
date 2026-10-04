@@ -19,12 +19,16 @@ const UF_NAMES: Record<string, string> = {
   RJ: "Rio de Janeiro", RN: "Rio Grande do Norte", RS: "Rio Grande do Sul", RO: "Rondônia", RR: "Roraima",
   SC: "Santa Catarina", SP: "São Paulo", SE: "Sergipe", TO: "Tocantins",
 };
-const PA_MUNICIPALITIES: { name: string; loaded: boolean }[] = [
-  { name: "Anapu", loaded: true },
-  { name: "Altamira", loaded: false },
-  { name: "Senador José Porfírio", loaded: false },
-  { name: "Vitória do Xingu", loaded: false },
-  { name: "Pacajá", loaded: false },
+/** Only Anapu has a verified cod_ibge (matches the `acs`/`health_facilities` rows already in
+ *  the database). The others are shown disabled, without a fabricated code, to be honest about
+ *  what's unconfirmed — IBGE CNEFE and DATASUS CNES do cover every one of these nationally, this
+ *  demo just hasn't loaded them (see the "Território" dialog copy below). */
+const PA_MUNICIPALITIES: { name: string; codIbge: string | null; loaded: boolean }[] = [
+  { name: "Anapu", codIbge: "1500859", loaded: true },
+  { name: "Altamira", codIbge: null, loaded: false },
+  { name: "Senador José Porfírio", codIbge: null, loaded: false },
+  { name: "Vitória do Xingu", codIbge: null, loaded: false },
+  { name: "Pacajá", codIbge: null, loaded: false },
 ];
 
 export const Route = createFileRoute("/perfil/")({
@@ -108,13 +112,14 @@ function ProfilePage() {
   };
 
   const saveTerritory = async () => {
-    if (!session || uf !== "PA" || !municipio) return;
+    const found = uf === "PA" ? PA_MUNICIPALITIES.find((m) => m.name === municipio) : null;
+    if (!session || !found?.loaded || !found.codIbge) return;
     setSavingTerritory(true);
     setTerritoryError(null);
-    const { error } = await updateTerritory(session.acsId, `${municipio}, ${uf}`);
+    const { error } = await updateTerritory(session.acsId, found.name, found.codIbge);
     setSavingTerritory(false);
     if (error) { setTerritoryError(error); return; }
-    setTerritoryOverride(`${municipio}, ${uf}`);
+    setTerritoryOverride(`${found.name}, ${uf}`);
     setTerritoryOpen(false);
   };
 
@@ -130,7 +135,8 @@ function ProfilePage() {
           <h1 className="text-title font-bold text-foreground">{session.name}</h1>
           <p className="text-body text-muted-foreground">Agente Comunitário de Saúde</p>
           <button onClick={() => setTerritoryOpen(true)} className="flex items-center gap-1 text-small text-ink-faint underline decoration-dotted">
-            <MapPin className="size-3.5 shrink-0" aria-hidden /> Território: {territoryOverride ?? session.territory ?? "Não informado"}
+            <MapPin className="size-3.5 shrink-0" aria-hidden />
+            Território: {territoryOverride ?? (session.municipio ? `${session.municipio}, PA` : session.territory ?? "Não informado")}
           </button>
         </header>
 
@@ -237,12 +243,21 @@ function ProfilePage() {
         <DialogContent className="max-w-sm border-border bg-card">
           <DialogHeader>
             <DialogTitle className="text-foreground">Território</DialogTitle>
-            <DialogDescription>
-              País → Estado → Município. A arquitetura do RoteACS usa o código IBGE do município como
-              parâmetro — trocar de cidade significa carregar outro arquivo de coordenadas (CNEFE) e outro
-              recorte do CNES, sem mudar uma linha do app. Esta demonstração só tem dados reais carregados
-              para Anapu-PA; os demais municípios aparecem aqui para deixar essa expansão explícita, não
-              escondida.
+            <DialogDescription className="flex flex-col gap-2">
+              <span>
+                País → Estado → Município. A arquitetura do RoteACS usa o código IBGE do município (coluna
+                <code className="mx-1 rounded bg-elevated px-1 py-0.5 text-label">cod_ibge</code>
+                nas tabelas <code className="rounded bg-elevated px-1 py-0.5 text-label">acs</code> e
+                <code className="mx-1 rounded bg-elevated px-1 py-0.5 text-label">health_facilities</code>)
+                como parâmetro — trocar de cidade é um dado novo, não um rebuild do app.
+              </span>
+              <span>
+                IBGE CNEFE e CNES/DATASUS são bases <strong>nacionais e públicas</strong>: existe dado real
+                para qualquer município do Brasil, não só Anapu. Esta demo só carregou um (por tempo de
+                hackathon, e porque este ambiente de desenvolvimento bloqueia a rede para baixar dados
+                externos ao vivo) — por isso os outros municípios aparecem aqui desabilitados, em vez de
+                escondidos.
+              </span>
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
@@ -284,7 +299,8 @@ function ProfilePage() {
             </p>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={saveTerritory} disabled={savingTerritory || uf !== "PA" || !municipio}
+            <button onClick={saveTerritory}
+              disabled={savingTerritory || !(uf === "PA" && PA_MUNICIPALITIES.find((m) => m.name === municipio)?.loaded)}
               className="flex h-12 items-center justify-center gap-2 rounded-lg bg-primary text-body font-semibold text-primary-foreground disabled:opacity-40">
               {savingTerritory ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <CheckCircle2 className="size-4" aria-hidden />} Salvar
             </button>
