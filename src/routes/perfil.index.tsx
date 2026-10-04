@@ -42,11 +42,11 @@ export const Route = createFileRoute("/perfil/")({
   component: ProfilePage,
 });
 
-function formatSync(iso: string | null, locale: Locale, never: string) {
+function formatSync(iso: string | null, locale: Locale, never: string, today: string) {
   if (!iso) return never;
   const d = new Date(iso);
   const time = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-  return d.toDateString() === new Date().toDateString() ? `${locale === "en" ? "Today" : "Hoje"}, ${time}` : `${d.toLocaleDateString(locale)}, ${time}`;
+  return d.toDateString() === new Date().toDateString() ? `${today}, ${time}` : `${d.toLocaleDateString(locale)}, ${time}`;
 }
 
 function storageUsed() {
@@ -157,7 +157,7 @@ function ProfilePage() {
             <span className="min-w-8 rounded-full bg-primary px-2 py-1 text-center text-small font-bold text-primary-foreground">{familiesCache.count}</span>
           </div>
           <p className="text-small text-muted-foreground">
-            {familiesCache.cachedAt ? `${t("perfil.lastOfflineCache")}: ${formatSync(familiesCache.cachedAt, locale, t("perfil.never"))}` : t("perfil.noOfflineCache")}
+            {familiesCache.cachedAt ? `${t("perfil.lastOfflineCache")}: ${formatSync(familiesCache.cachedAt, locale, t("perfil.never"), t("perfil.today"))}` : t("perfil.noOfflineCache")}
           </p>
           <p className="text-label text-ink-faint">{t("perfil.territoryScopeNote", { territory: territoryLabel })}</p>
         </section>
@@ -171,7 +171,7 @@ function ProfilePage() {
           <p className="flex items-center gap-2 text-small text-muted-foreground">
             <CheckCircle2 className="size-4 shrink-0 text-risk-low" aria-hidden /> {queue.synced} {t("perfil.syncedRecords")}
           </p>
-          <p className="text-small text-muted-foreground">{t("perfil.lastSync")}: {formatSync(lastSync, locale, t("perfil.never"))}</p>
+          <p className="text-small text-muted-foreground">{t("perfil.lastSync")}: {formatSync(lastSync, locale, t("perfil.never"), t("perfil.today"))}</p>
           <p className="text-label text-ink-faint">{t("perfil.offlineQueueNote")}</p>
           {state === "done" && queue.pending === 0 ? (
             <p role="status" className="flex h-14 items-center justify-center gap-2 rounded-lg border border-risk-low bg-risk-low/15 text-body font-bold text-risk-low">
