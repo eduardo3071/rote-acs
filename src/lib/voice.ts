@@ -1,15 +1,18 @@
 /**
- * RoteACS — reconhecimento de voz em português (push-to-talk) para o registro de
- * visita. Usa a Web Speech API nativa do navegador (sem dependências novas — o
- * ambiente de build deste projeto não consegue instalar pacotes a partir do
- * registry privado da Lovable). O vocabulário de cada pergunta é fechado
- * (sim/não, fonte de água, números 0–10, sintomas conhecidos), então o
- * reconhecimento vira um problema de "pattern recognition" bem definido — a
- * definição de Small AI usada neste projeto — em vez de transcrição livre.
+ * RoteACS — reconhecimento de voz em português para o registro de visita.
+ * Usa o modelo Vosk (vosk-model-small-pt) rodando on-device via WebAssembly
+ * — 100% offline depois do primeiro carregamento — com fallback automático
+ * para a Web Speech API (nuvem) se o modelo não carregar (sem mic/WASM, erro
+ * de rede no primeiro download, navegador sem suporte). O vocabulário de
+ * cada pergunta é fechado (sim/não, fonte de água, números 0–10, sintomas e
+ * motivos conhecidos — ver `DEFAULT_GRAMMAR`), então o reconhecimento vira
+ * um problema de "pattern recognition" bem definido — a definição de Small
+ * AI usada neste projeto — em vez de transcrição livre.
  *
- * Isolado nesta única interface (`listenOnce`) para que trocar por um modelo
- * 100% on-device (ex.: Vosk/WASM) no futuro seja só reescrever este arquivo,
- * sem tocar nas telas.
+ * Isolado nesta única interface (`listenOnce`) para que as telas (e o
+ * "Modo Conversa" em `familias.$id.visita.tsx`, que fala cada pergunta via
+ * `speak()` e chama `listenOnce()` repetidas vezes em sequência) não
+ * precisem saber qual motor está respondendo.
  */
 
 interface SpeechRecognitionResultLike {
@@ -62,7 +65,10 @@ const DEFAULT_GRAMMAR = [
   "zero", "nenhum", "nenhuma", "um", "uma", "dois", "duas", "três", "quatro", "cinco",
   "seis", "sete", "oito", "nove", "dez",
   "diarreia", "febre", "tosse", "respirar", "vômito", "sem sintoma",
-  "olhos fundos", "boca seca", "letárgica", "sonolenta", "[unk]",
+  "olhos fundos", "boca seca", "letárgica", "sonolenta",
+  // motivo da visita (Modo Conversa, 1ª pergunta — ver parseReason)
+  "rotina", "sintoma", "gestante", "pré-natal", "prenatal", "grávida", "crônica", "crônico",
+  "[unk]",
 ];
 
 type VoskModel = Awaited<ReturnType<typeof import("vosk-browser")["createModel"]>>;
@@ -198,7 +204,28 @@ function listenWithWebSpeech(lang: string): Promise<string> {
   });
 }
 
+/** Speaks a prompt out loud (pt-BR) using the browser's built-in speech synthesis — the
+ *  other half of "Modo Conversa": the app asks, the ACS answers, no typing/tapping in between. */
+export function speak(text: string, lang = "pt-BR"): Promise<void> {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
 // ---------- parsers: closed-vocabulary speech → structured field ----------
+
+export function parseReason(transcript: string): "routine" | "symptom" | "prenatal" | "chronic" | null {
+  if (/gestante|pr[eé]-?natal|grávida/.test(transcript)) return "prenatal";
+  if (/cr[oô]nic/.test(transcript)) return "chronic";
+  if (/sintoma/.test(transcript)) return "symptom";
+  if (/rotina/.test(transcript)) return "routine";
+  return null;
+}
 
 export function parseYesNo(transcript: string): boolean | null {
   if (/\bn[aã]o\b/.test(transcript)) return false;
