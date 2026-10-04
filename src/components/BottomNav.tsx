@@ -1,16 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import { Home, Map, User } from "lucide-react";
-
-const TABS = [
-  { to: "/dashboard", label: "Início", icon: Home },
-  { to: "/familias", label: "Famílias", icon: Map },
-  { to: "/perfil", label: "Perfil", icon: User },
-] as const;
+import { useT } from "@/lib/i18n";
 
 /** Persistent 3-tab navigation for the main screens. */
 export function BottomNav() {
+  const t = useT();
+  const TABS = [
+    { to: "/dashboard", label: t("nav.home"), icon: Home },
+    { to: "/familias", label: t("nav.families"), icon: Map },
+    { to: "/perfil", label: t("nav.profile"), icon: User },
+  ] as const;
+
   return (
-    <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-20 h-16 border-t border-border bg-card/95 backdrop-blur">
+    <nav aria-label={t("nav.aria")} className="fixed inset-x-0 bottom-0 z-20 h-16 border-t border-border bg-card/95 backdrop-blur">
       <ul className="mx-auto grid h-full max-w-md grid-cols-3 md:max-w-2xl">
         {TABS.map(({ to, label, icon: Icon }) => (
           <li key={to}>

@@ -8,6 +8,7 @@ import { AppLogoInline } from "@/components/AppLogo";
 import { TerritoryIllustration } from "@/components/onboarding/TerritoryIllustration";
 import { OfflineIllustration } from "@/components/onboarding/OfflineIllustration";
 import { PriorityIllustration } from "@/components/onboarding/PriorityIllustration";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const illustrations = {
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/onboarding")({
 
 function OnboardingScreen() {
   const navigate = useNavigate({ from: "/onboarding" });
+  const t = useT();
   const trackRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const isLast = active === slides.length - 1;
@@ -88,7 +90,7 @@ function OnboardingScreen() {
               )}
               tabIndex={isLast ? -1 : 0}
             >
-              Pular
+              {t("onboarding.skip")}
             </button>
           </div>
           <div className="flex w-full items-center justify-between">
@@ -109,8 +111,8 @@ function OnboardingScreen() {
             return (
               <OnboardingSlide
                 key={slide.id}
-                title={slide.title}
-                text={slide.text}
+                title={t(slide.titleKey)}
+                text={t(slide.textKey)}
                 active={i === active}
                 illustration={<Illustration key={i === active ? "on" : "off"} play={i === active} />}
               />
@@ -119,7 +121,7 @@ function OnboardingScreen() {
         </div>
 
         <footer className="px-6 pt-6 pb-8">
-          <PrimaryButton onClick={advance}>{isLast ? "Começar" : "Continuar"}</PrimaryButton>
+          <PrimaryButton onClick={advance}>{isLast ? t("onboarding.start") : t("onboarding.continue")}</PrimaryButton>
         </footer>
       </div>
     </div>

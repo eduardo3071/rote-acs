@@ -7,6 +7,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { TerritoryBackdrop } from "@/components/TerritoryBackdrop";
 import { Input } from "@/components/ui/input";
 import { getSession, login } from "@/lib/session";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/login")({
@@ -23,14 +24,11 @@ export const Route = createFileRoute("/login")({
   component: LoginScreen,
 });
 
-const schema = z.object({
-  agentCode: z.string().trim().min(1, "Digite seu código").max(20, "Código muito longo"),
-  password: z.string().min(1, "Digite sua senha").max(80, "Senha muito longa"),
-});
 type Errors = { agentCode?: string | undefined; password?: string | undefined };
 
 function LoginScreen() {
   const navigate = useNavigate({ from: "/login" });
+  const t = useT();
   const [agentCode, setAgentCode] = useState("ACS001");
   const [password, setPassword] = useState("roteacs2026");
   const [errors, setErrors] = useState<Errors>({});
@@ -46,6 +44,10 @@ function LoginScreen() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     setAuthError(null);
+    const schema = z.object({
+      agentCode: z.string().trim().min(1, t("login.err.code")).max(20, t("login.err.codeLong")),
+      password: z.string().min(1, t("login.err.password")).max(80, t("login.err.passwordLong")),
+    });
     const r = schema.safeParse({ agentCode, password });
     if (!r.success) {
       const f = r.error.flatten().fieldErrors;
@@ -72,20 +74,20 @@ function LoginScreen() {
       >
         <div className="flex flex-col items-center text-center animate-rise-in">
           <AppLogo glow className="size-24" />
-          <h1 className="mt-6 text-title font-bold text-foreground">Bem-vindo ao RoteACS</h1>
-          <p className="mt-2 text-body text-muted-foreground">Entre para acessar seu território</p>
+          <h1 className="mt-6 text-title font-bold text-foreground">{t("login.welcome")}</h1>
+          <p className="mt-2 text-body text-muted-foreground">{t("login.subtitle")}</p>
         </div>
 
         <div className="mt-8 space-y-4 rounded-xl border border-border bg-card p-4">
-          <Field id="agentCode" label="Código do agente" placeholder="Ex.: ACS001" value={agentCode}
+          <Field id="agentCode" label={t("login.agentCode")} placeholder={t("login.agentCodePlaceholder")} value={agentCode}
             autoComplete="username" error={errors.agentCode}
             onChange={(v) => { setAgentCode(v); setErrors((s) => ({ ...s, agentCode: undefined })); setAuthError(null); }} />
-          <Field id="password" label="Senha" placeholder="Digite sua senha" value={password} type="password"
+          <Field id="password" label={t("login.password")} placeholder={t("login.passwordPlaceholder")} value={password} type="password"
             autoComplete="current-password" error={errors.password}
             onChange={(v) => { setPassword(v); setErrors((s) => ({ ...s, password: undefined })); setAuthError(null); }} />
         </div>
         <p className="mt-2 text-center text-small text-muted-foreground">
-          Credenciais de demonstração carregadas para avaliação.
+          {t("login.demoCreds")}
         </p>
 
         {authError && (
@@ -96,10 +98,10 @@ function LoginScreen() {
 
         <div className="mt-auto pt-8">
           <PrimaryButton type="submit" disabled={submitting}>
-            {submitting ? "ENTRANDO…" : "ENTRAR"}
+            {submitting ? t("login.signingIn") : t("login.signIn")}
           </PrimaryButton>
           <p className="mt-4 flex items-center justify-center gap-2 text-small font-semibold text-risk-low">
-            <Check className="size-4" aria-hidden /> Funciona offline
+            <Check className="size-4" aria-hidden /> {t("login.worksOffline")}
           </p>
         </div>
       </form>

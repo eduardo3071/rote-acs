@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { getSession } from "@/lib/session";
+import { useT } from "@/lib/i18n";
 import { AppLogo } from "@/components/AppLogo";
 import { TerritoryBackdrop } from "@/components/TerritoryBackdrop";
 
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/")({
 
 function SplashScreen() {
   const navigate = useNavigate({ from: "/" });
+  const t = useT();
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -57,7 +59,7 @@ function SplashScreen() {
             className="mt-4 max-w-[240px] animate-rise-in text-center text-subtitle font-medium text-ink"
             style={{ animationDelay: "800ms" }}
           >
-            Voz do Agente Comunitário de Saúde
+            {t("splash.tagline")}
           </p>
         </div>
         <div
@@ -65,7 +67,7 @@ function SplashScreen() {
           style={{ animationDelay: "1000ms" }}
         >
           <p className="max-w-[220px] text-center text-small text-ink-soft">
-            Inteligência offline para quem está em campo
+            {t("splash.subtitle")}
           </p>
           <div className="h-1 w-24 overflow-hidden rounded-pill bg-border">
             <div className="h-full w-full animate-fill-bar rounded-pill bg-primary" />
