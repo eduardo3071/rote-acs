@@ -319,7 +319,8 @@ export async function confirmVisit(familyId: string, v: VisitInput): Promise<{ a
   if (result.ok) {
     const queue = getSyncQueue();
     const idx = queue.findIndex((r) => r.id === record.id);
-    if (idx !== -1) queue[idx] = { ...queue[idx], status: "synced" };
+    const existing = queue[idx];
+    if (existing) queue[idx] = { ...existing, status: "synced" };
     writeSyncQueue(queue);
     window.localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
     notifyFamiliesChanged();
