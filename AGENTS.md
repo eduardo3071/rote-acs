@@ -29,3 +29,7 @@ All colors, type sizes, spacing and radii are semantic tokens defined in `src/st
 Reusable app pieces (AppLogo, PrimaryButton, PageIndicator, IconContainer, OnboardingSlide, AppCard, RiskBadge) live in `src/components/`; screens compose them instead of restyling inline. Static content and mock data live in `src/data/` so a future backend can replace them without touching screens. Icons come from lucide-react only — emoji glyphs render inconsistently on cheap Android panels.
 - Mock session lives in `src/lib/session.ts` (localStorage, `getSession`/`saveSession`/`logout`) and family data in `src/data/families.ts` with derived scores — so a future backend swaps these modules without touching screens. Risk-priority rules for screens (labels, filters, short reasons) live in `src/lib/risk.ts` so thresholds stay in one place.
 - Visit records live in `src/lib/territory.ts` (localStorage overrides on top of mockFamilies, `useFamilies`/`registerVisit`, 200 m neighbour rule) — screens read families through it so visits show everywhere and a backend can replace it. Family detail is `familias.$id.index.tsx` so `/familias/$id/visita` renders as its own page.
+
+## Localization
+
+All user-visible copy is selected from the shared locale dictionaries; post-login family-derived labels use the localized-family helpers so changing language updates every screen without altering domain data.
