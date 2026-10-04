@@ -6,6 +6,8 @@ export interface AgentSession {
   name: string;
   agentCode: string;
   territory: string | null;
+  municipio: string | null;
+  codIbge: string | null;
   loggedIn: true;
 }
 
@@ -21,10 +23,13 @@ export async function getSession(): Promise<AgentSession | null> {
   const code = authSession.user.email.split("@")[0]?.toUpperCase();
   if (!code) return null;
 
-  const { data: acs } = await supabase.from("acs").select("id,name,code,territory").eq("code", code).single();
+  const { data: acs } = await supabase.from("acs").select("id,name,code,territory,municipio,cod_ibge").eq("code", code).single();
   if (!acs) return null;
 
-  return { acsId: acs.id, name: acs.name, agentCode: acs.code, territory: acs.territory, loggedIn: true };
+  return {
+    acsId: acs.id, name: acs.name, agentCode: acs.code, territory: acs.territory,
+    municipio: acs.municipio, codIbge: acs.cod_ibge, loggedIn: true,
+  };
 }
 
 /** Signs in with the agent code and password via Supabase Auth. */
@@ -41,9 +46,15 @@ export async function logout() {
   await supabase.auth.signOut();
 }
 
-/** Updates the agent's territory (país > estado > município) on the `acs` row. */
-export async function updateTerritory(acsId: string, territory: string): Promise<{ error?: string }> {
-  const { error } = await supabase.from("acs").update({ territory }).eq("id", acsId);
+/**
+ * Updates the agent's território by writing the real scalability parameter the schema already
+ * has — `municipio` + `cod_ibge` (the IBGE municipality code) — rather than a free-text label.
+ * This is what "swap the IBGE code, not the codebase" means concretely: `families` and
+ * `health_facilities` are keyed by this same code, so pointing an agent at a new one is a data
+ * question, not a rebuild.
+ */
+export async function updateTerritory(acsId: string, municipio: string, codIbge: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("acs").update({ municipio, cod_ibge: codIbge }).eq("id", acsId);
   if (error) return { error: "Não foi possível salvar o território." };
   return {};
 }

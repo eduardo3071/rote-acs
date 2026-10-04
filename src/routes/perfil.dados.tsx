@@ -25,8 +25,8 @@ const DATASETS: DatasetRow[] = [
     name: "Coordenadas de domicílios",
     source: "IBGE CNEFE 2022 — equivalente brasileiro ao WorldPop/OpenStreetMap sugeridos no Annex A (seção 7.3-C) para base geográfica",
     license: "Domínio público",
-    covers: "Latitude/longitude reais de 50 domicílios em Anapu, PA (código IBGE 1500859).",
-    doesNotCover: "Não está ligado a moradores reais — nomes de família e histórico clínico nessas coordenadas são fictícios, criados só para a demonstração.",
+    covers: "Latitude/longitude reais de 50 domicílios em Anapu, PA (código IBGE 1500859). O CNEFE é nacional — cobre qualquer município do Brasil, não só este.",
+    doesNotCover: "Não está ligado a moradores reais — nomes de família e histórico clínico nessas coordenadas são fictícios, criados só para a demonstração. Só carregamos 1 dos 5.570 municípios nesta demo, por tempo de hackathon e porque este ambiente bloqueia o download ao vivo de dados externos — não por o dado não existir para outras cidades.",
   },
   {
     name: "Unidades de saúde (UBS)",
