@@ -1,4 +1,5 @@
 import type { RiskLevel } from "@/lib/risk";
+import { fill, useAppTranslations } from "@/lib/app-translations";
 
 const order: RiskLevel[] = ["high", "medium", "low"];
 const stroke: Record<RiskLevel, string> = {
@@ -9,6 +10,7 @@ const stroke: Record<RiskLevel, string> = {
 
 /** Semicircular distribution gauge drawn in SVG. */
 export function TerritoryRiskChart({ counts, total }: { counts: Record<RiskLevel, number>; total: number }) {
+  const { m } = useAppTranslations();
   const GAP = total > 0 ? 1.2 : 0;
   let start = 0;
   const segments = order
@@ -24,7 +26,7 @@ export function TerritoryRiskChart({ counts, total }: { counts: Record<RiskLevel
   return (
     <div className="relative mx-auto w-full max-w-[15rem]">
       <svg viewBox="0 0 128 72" className="w-full overflow-visible" role="img"
-        aria-label={`${counts.high} alta prioridade, ${counts.medium} atenção, ${counts.low} OK`}>
+        aria-label={fill(m.dashboard.chartAria, counts)}>
         <path d={arc} pathLength={100} fill="none" strokeWidth={10} strokeLinecap="round" className="stroke-elevated" />
         {segments.map((s) => (
           <path key={s.l} d={arc} pathLength={100} fill="none" strokeWidth={10} strokeLinecap="butt"
@@ -34,7 +36,7 @@ export function TerritoryRiskChart({ counts, total }: { counts: Record<RiskLevel
       </svg>
       <div className="absolute inset-x-0 bottom-0 flex flex-col items-center">
         <span className="text-display font-bold leading-none text-foreground">{total}</span>
-        <span className="label-caps mt-1 text-muted-foreground">famílias</span>
+        <span className="label-caps mt-1 text-muted-foreground">{m.common.families}</span>
       </div>
     </div>
   );
