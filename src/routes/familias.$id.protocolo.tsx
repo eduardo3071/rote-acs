@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { getFamilyById, type WaterSource } from "@/data/families";
 import { useFamily } from "@/lib/territory";
+import { loadRemoteFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
 
 export const Route = createFileRoute("/familias/$id/protocolo")({
@@ -12,8 +13,9 @@ export const Route = createFileRoute("/familias/$id/protocolo")({
     pendente: z.boolean().optional(),
     urgente: z.boolean().optional(),
   }),
-  loader: ({ params }) => {
-    const family = getFamilyById(params.id);
+  ssr: false,
+  loader: async ({ params }) => {
+    const family = getFamilyById(params.id) ?? (await loadRemoteFamily(params.id));
     if (!family) throw notFound();
     return { family };
   },

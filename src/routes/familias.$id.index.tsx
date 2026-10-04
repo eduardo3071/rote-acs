@@ -5,12 +5,14 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { daysSinceVisit, getFamilyById, type Family } from "@/data/families";
 import { daysAgoLabel, riskLevel, waterLabel, type RiskLevel } from "@/lib/risk";
 import { useFamily } from "@/lib/territory";
+import { loadRemoteFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/familias/$id/")({
-  loader: ({ params }) => {
-    const family = getFamilyById(params.id);
+  ssr: false,
+  loader: async ({ params }) => {
+    const family = getFamilyById(params.id) ?? (await loadRemoteFamily(params.id));
     if (!family) throw notFound();
     return { family };
   },

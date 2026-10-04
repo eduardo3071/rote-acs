@@ -128,7 +128,7 @@ export async function refreshFamiliesNow(): Promise<void> {
 }
 
 /** Fetches a single family by id from Supabase; falls back to the cache, then the mock dataset. */
-async function loadRemoteFamily(id: string): Promise<Family | undefined> {
+export async function loadRemoteFamily(id: string): Promise<Family | undefined> {
   const { data, error } = await supabase.from("families").select("*").eq("id", id).single();
   if (error || !data) {
     const cache = readFamiliesCache();
