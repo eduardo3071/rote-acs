@@ -1,5 +1,6 @@
 import { Check, Database, RefreshCw, WifiOff } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function Chip({
@@ -32,6 +33,8 @@ function Chip({
 
 /** A phone keeps recording visits with no signal; chips show storage and later sync. */
 export function OfflineIllustration({ play }: { play: boolean }) {
+  const t = useT();
+
   return (
     <div className="relative grid aspect-square w-full max-w-[300px] place-items-center">
       <svg viewBox="0 0 100 100" className="absolute inset-0 size-full text-primary" fill="none" aria-hidden>
@@ -47,7 +50,7 @@ export function OfflineIllustration({ play }: { play: boolean }) {
       >
         <div className="mx-auto h-1 w-6 rounded-pill bg-border" />
         <div className="flex items-center justify-between px-1">
-          <span className="label-caps text-ink-soft">Offline</span>
+          <span className="label-caps text-ink-soft">{t("onboarding.offline.status")}</span>
           <WifiOff className="size-3 text-risk-medium" aria-hidden />
         </div>
         {[0, 1, 2].map((i) => (
@@ -60,9 +63,9 @@ export function OfflineIllustration({ play }: { play: boolean }) {
         ))}
       </div>
 
-      <Chip play={play} delay={250} icon={WifiOff} text="Sem sinal" className="left-0 top-[10%]" />
-      <Chip play={play} delay={400} icon={Database} text="Salvo no celular" className="right-0 top-[42%]" />
-      <Chip play={play} delay={550} icon={RefreshCw} text="Sincroniza depois" className="bottom-[8%] left-[2%]" />
+      <Chip play={play} delay={250} icon={WifiOff} text={t("onboarding.offline.noSignal")} className="left-0 top-[10%]" />
+      <Chip play={play} delay={400} icon={Database} text={t("onboarding.offline.saved")} className="right-0 top-[42%]" />
+      <Chip play={play} delay={550} icon={RefreshCw} text={t("onboarding.offline.syncLater")} className="bottom-[8%] left-[2%]" />
     </div>
   );
 }

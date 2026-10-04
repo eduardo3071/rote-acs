@@ -1,17 +1,25 @@
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
-import { RiskBadge, riskLabels, riskLevel } from "@/components/RiskBadge";
+import { RiskBadge, riskLevel, type RiskLevel } from "@/components/RiskBadge";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const rows = [
-  { name: "Família B", score: 87, move: "up", note: "subiu 2 posições" },
-  { name: "Família C", score: 61, move: "same", note: "mantida" },
-  { name: "Família A", score: 32, move: "down", note: "desceu 2 posições" },
+  { nameKey: "onboarding.priority.familyB", score: 87, move: "up", noteKey: "onboarding.priority.up" },
+  { nameKey: "onboarding.priority.familyC", score: 61, move: "same", noteKey: "onboarding.priority.same" },
+  { nameKey: "onboarding.priority.familyA", score: 32, move: "down", noteKey: "onboarding.priority.down" },
 ] as const;
 
 const moveIcon = { up: ArrowUp, same: Minus, down: ArrowDown };
+const riskLabelKeys: Record<RiskLevel, "onboarding.priority.high" | "onboarding.priority.medium" | "onboarding.priority.low"> = {
+  high: "onboarding.priority.high",
+  medium: "onboarding.priority.medium",
+  low: "onboarding.priority.low",
+};
 
 /** A reordered visit list: the family whose risk rose jumps to the top. */
 export function PriorityIllustration({ play }: { play: boolean }) {
+  const t = useT();
+
   return (
     <div className="relative w-full max-w-[320px]">
       <div aria-hidden className="absolute bottom-8 left-[42px] top-8 w-px bg-gradient-to-b from-primary/60 via-primary/25 to-transparent" />
@@ -21,7 +29,7 @@ export function PriorityIllustration({ play }: { play: boolean }) {
           const level = riskLevel(r.score);
           return (
             <li
-              key={r.name}
+              key={r.nameKey}
               className={cn(
                 "flex items-center gap-4 rounded-lg border bg-card p-3 shadow-card",
                 r.move === "up" ? "border-risk-high/50 bg-elevated" : "border-border",
@@ -31,8 +39,8 @@ export function PriorityIllustration({ play }: { play: boolean }) {
             >
               <RiskBadge score={r.score} />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="text-body font-semibold text-ink">{r.name}</span>
-                <span className="text-small text-ink-soft">{riskLabels[level]}</span>
+                <span className="text-body font-semibold text-ink">{t(r.nameKey)}</span>
+                <span className="text-small text-ink-soft">{t(riskLabelKeys[level])}</span>
               </div>
               <span
                 className={cn(
@@ -41,10 +49,10 @@ export function PriorityIllustration({ play }: { play: boolean }) {
                   r.move === "same" && "text-ink-soft",
                   r.move === "down" && "text-risk-low",
                 )}
-                aria-label={r.note}
+                aria-label={t(r.noteKey)}
               >
                 <Icon className="size-4" aria-hidden />
-                {i + 1}º
+                {t("onboarding.position", { position: String(i + 1) })}
               </span>
             </li>
           );
