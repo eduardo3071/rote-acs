@@ -40,12 +40,125 @@ function getRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-export function isVoiceSupported(): boolean {
-  return getRecognitionCtor() !== null;
+function hasMicAndWasm(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof WebAssembly !== "undefined" &&
+    !!navigator.mediaDevices?.getUserMedia &&
+    typeof AudioContext !== "undefined"
+  );
 }
 
-/** Records one short utterance and resolves with the lowercase transcript. */
-export function listenOnce(lang = "pt-BR"): Promise<string> {
+export function isVoiceSupported(): boolean {
+  return hasMicAndWasm() || getRecognitionCtor() !== null;
+}
+
+// ---------- Vosk on-device engine (singleton, lazy) ----------
+
+/** Closed vocabulary of every voice question — used as the default Vosk grammar. */
+const DEFAULT_GRAMMAR = [
+  "sim", "não", "nao", "sei", "não sei", "não se aplica", "sem latrina",
+  "poço", "rio", "igarapé", "torneira", "outra", "outro",
+  "zero", "nenhum", "nenhuma", "um", "uma", "dois", "duas", "três", "quatro", "cinco",
+  "seis", "sete", "oito", "nove", "dez",
+  "diarreia", "febre", "tosse", "respirar", "vômito", "sem sintoma",
+  "olhos fundos", "boca seca", "letárgica", "sonolenta", "[unk]",
+];
+
+type VoskModel = Awaited<ReturnType<typeof import("vosk-browser")["createModel"]>>;
+let modelPromise: Promise<VoskModel> | null = null;
+let voskFailed = false;
+
+function loadModel(): Promise<VoskModel> {
+  if (!modelPromise) {
+    modelPromise = (async () => {
+      const [{ createModel }, asset] = await Promise.all([
+        import("vosk-browser"),
+        import("@/assets/vosk-model-small-pt.tar.gz.asset.json"),
+      ]);
+      const model = await createModel(asset.default.url);
+      model.setLogLevel(-1);
+      return model;
+    })().catch((err) => {
+      voskFailed = true;
+      modelPromise = null;
+      throw err;
+    });
+  }
+  return modelPromise;
+}
+
+async function listenWithVosk(grammar: string[], timeoutMs = 7000): Promise<string> {
+  const model = await loadModel();
+  const stream = await navigator.mediaDevices.getUserMedia({
+    audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
+  });
+  const ctx = new AudioContext();
+  const recognizer = new model.KaldiRecognizer(ctx.sampleRate, JSON.stringify(grammar));
+  const source = ctx.createMediaStreamSource(stream);
+  const processor = ctx.createScriptProcessor(4096, 1, 1);
+
+  return new Promise<string>((resolve, reject) => {
+    let done = false;
+    let partial = "";
+    const cleanup = () => {
+      processor.disconnect();
+      source.disconnect();
+      stream.getTracks().forEach((t) => t.stop());
+      void ctx.close();
+      recognizer.remove();
+    };
+    const finish = (text: string) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      cleanup();
+      const clean = text.replace(/\[unk\]/g, "").trim().toLowerCase();
+      if (clean) resolve(clean);
+      else reject(new Error("Não entendi, tente de novo."));
+    };
+    recognizer.on("result", (msg) => {
+      const text = (msg as { result: { text: string } }).result.text;
+      if (text && text.replace(/\[unk\]/g, "").trim()) finish(text);
+    });
+    recognizer.on("partialresult", (msg) => {
+      partial = (msg as { result: { partial: string } }).result.partial || partial;
+    });
+    const timer = setTimeout(() => finish(partial), timeoutMs);
+    processor.onaudioprocess = (ev) => {
+      if (done) return;
+      try {
+        recognizer.acceptWaveform(ev.inputBuffer);
+      } catch (e) {
+        done = true;
+        clearTimeout(timer);
+        cleanup();
+        reject(e);
+      }
+    };
+    source.connect(processor);
+    processor.connect(ctx.destination);
+  });
+}
+
+/**
+ * Records one short utterance and resolves with the lowercase transcript.
+ * Uses the on-device Vosk model (offline); falls back to the Web Speech API if
+ * the model can't load. `grammar` optionally restricts the accepted words.
+ */
+export async function listenOnce(lang = "pt-BR", grammar: string[] = DEFAULT_GRAMMAR): Promise<string> {
+  if (!voskFailed && hasMicAndWasm()) {
+    try {
+      await loadModel();
+    } catch {
+      // model download / WASM failed — use the cloud fallback below
+    }
+    if (!voskFailed) return listenWithVosk(grammar.includes("[unk]") ? grammar : [...grammar, "[unk]"]);
+  }
+  return listenWithWebSpeech(lang);
+}
+
+function listenWithWebSpeech(lang: string): Promise<string> {
   const Ctor = getRecognitionCtor();
   if (!Ctor) return Promise.reject(new Error("Reconhecimento de voz não é suportado neste navegador."));
 
