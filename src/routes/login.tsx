@@ -31,8 +31,8 @@ type Errors = { agentCode?: string | undefined; password?: string | undefined };
 
 function LoginScreen() {
   const navigate = useNavigate({ from: "/login" });
-  const [agentCode, setAgentCode] = useState("");
-  const [password, setPassword] = useState("");
+  const [agentCode, setAgentCode] = useState("ACS001");
+  const [password, setPassword] = useState("roteacs2026");
   const [errors, setErrors] = useState<Errors>({});
   const [authError, setAuthError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -84,6 +84,9 @@ function LoginScreen() {
             autoComplete="current-password" error={errors.password}
             onChange={(v) => { setPassword(v); setErrors((s) => ({ ...s, password: undefined })); setAuthError(null); }} />
         </div>
+        <p className="mt-2 text-center text-small text-muted-foreground">
+          Credenciais de demonstração carregadas para avaliação.
+        </p>
 
         {authError && (
           <p role="alert" className="mt-4 flex items-center gap-2 text-small text-risk-high">
