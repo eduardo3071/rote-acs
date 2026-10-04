@@ -13,7 +13,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { daysSinceVisit } from "@/data/families";
 import { getNearestHealthFacility, useFamilies, type NearestFacility } from "@/lib/territory";
-import { countByLevel, priorityLabels, type RiskLevel } from "@/lib/risk";
+import { countByLevel, type RiskLevel } from "@/lib/risk";
 import { useAppTranslations } from "@/lib/app-translations";
 import { localizedPriority } from "@/lib/localized-family";
 
