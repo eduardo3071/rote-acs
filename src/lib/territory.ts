@@ -25,7 +25,7 @@ const SYNC_QUEUE_EVENT = "roteacs:sync-queue";
 const LAST_SYNC_KEY = "roteacs.lastSync";
 
 /** Tells every mounted useFamilies/useFamily hook to refetch from Supabase. */
-function notifyFamiliesChanged() {
+export function notifyFamiliesChanged() {
   window.dispatchEvent(new Event(REMOTE_REFRESH_EVENT));
 }
 

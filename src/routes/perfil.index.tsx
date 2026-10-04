@@ -4,7 +4,7 @@ import { AlertCircle, CheckCircle2, Cloud, Copy, Database, Languages, Loader2, L
 import { BottomNav } from "@/components/BottomNav";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { exportToDhis2, getFamiliesCacheMeta, getLastSyncAt, getSyncQueueCounts, syncQueue } from "@/lib/territory";
+import { exportToDhis2, getFamiliesCacheMeta, getLastSyncAt, getSyncQueueCounts, notifyFamiliesChanged, syncQueue } from "@/lib/territory";
 import { logout, updateTerritory } from "@/lib/session";
 import { useAgentSession } from "@/lib/useAgentSession";
 
@@ -121,6 +121,9 @@ function ProfilePage() {
     if (error) { setTerritoryError(error); return; }
     setTerritoryOverride(`${found.name}, ${uf}`);
     setTerritoryOpen(false);
+    // loadRemoteFamilies() re-reads the session (and its cod_ibge) fresh on every call, so this
+    // alone is enough to swap the family list — no page reload needed.
+    notifyFamiliesChanged();
   };
 
   if (!session) return <div className="field-surface min-h-screen" />;
