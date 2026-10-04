@@ -1,4 +1,5 @@
 import { Home } from "lucide-react";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const nodes = [
@@ -18,6 +19,8 @@ const toneClass = {
 
 /** Families (houses) linked to a central territory hub, tinted by priority. */
 export function TerritoryIllustration({ play }: { play: boolean }) {
+  const t = useT();
+
   return (
     <div className="relative aspect-square w-full max-w-[280px]">
       <svg viewBox="0 0 100 100" className="absolute inset-0 size-full text-primary" fill="none" aria-hidden>
@@ -41,7 +44,7 @@ export function TerritoryIllustration({ play }: { play: boolean }) {
       </svg>
 
       <div className="absolute left-1/2 top-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-pill border border-primary/40 bg-elevated shadow-primary">
-        <span className="label-caps text-primary">Área</span>
+        <span className="label-caps text-primary">{t("onboarding.territory.area")}</span>
       </div>
 
       {nodes.map((n, i) => (
