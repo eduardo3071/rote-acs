@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
 
     const { data: lastVisit, error: visitError } = await supabase
       .from("visits")
-      .select("id, visited_at, gi_symptom, water_source, children_under5")
+      .select("id, visited_at, gi_symptom, water_source, children_under5, urgent_referral")
       .eq("family_id", family_id)
       .order("visited_at", { ascending: false })
       .limit(1)
@@ -115,18 +115,22 @@ Deno.serve(async (req) => {
       vaccinationsOk: family.vaccinations_ok ?? true,
       clusterRisk: family.cluster_risk ?? false,
     });
-    const riskReason = generateRiskReason({
-      days,
-      giSymptom,
-      childrenUnder5,
-      vaccinationsOk: family.vaccinations_ok ?? true,
-      clusterRisk: family.cluster_risk ?? false,
-    });
+    const urgent = lastVisit.urgent_referral === true;
+    const finalScore = Math.min(100, riskScore + (urgent ? 25 : 0));
+    const riskReason = urgent
+      ? "Sinais de desidratação em criança — encaminhamento urgente."
+      : generateRiskReason({
+          days,
+          giSymptom,
+          childrenUnder5,
+          vaccinationsOk: family.vaccinations_ok ?? true,
+          clusterRisk: family.cluster_risk ?? false,
+        });
 
     await supabase
       .from("families")
       .update({
-        risk_score: riskScore,
+        risk_score: finalScore,
         risk_reason: riskReason,
         children_under5: childrenUnder5,
         water_source: waterSource,

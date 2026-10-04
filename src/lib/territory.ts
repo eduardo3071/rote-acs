@@ -49,6 +49,8 @@ function mapFamilyRow(row: {
   cluster_risk: boolean | null;
   last_visit_at: string | null;
   created_at: string | null;
+  has_pregnant?: boolean | null;
+  has_chronic?: boolean | null;
 }): Family {
   return {
     id: row.id,
@@ -64,6 +66,8 @@ function mapFamilyRow(row: {
     riskScore: row.risk_score ?? 0,
     riskReason: row.risk_reason ?? "",
     clusterRisk: row.cluster_risk ?? false,
+    hasPregnant: row.has_pregnant ?? false,
+    hasChronic: row.has_chronic ?? false,
   };
 }
 
@@ -183,7 +187,8 @@ async function trySyncRecord(record: QueuedVisit, acsId: string): Promise<{ ok: 
       water_source: record.waterSource,
       children_under5: Math.max(0, record.childrenUnder5),
       synced_at: new Date().toISOString(),
-    });
+      ...(record.details ?? {}),
+    } as never);
     if (insertError) return { ok: false, affected: 0 };
 
     let affected = 0;
@@ -273,6 +278,30 @@ export interface VisitInput {
   symptoms: boolean;
   waterSource: WaterSource;
   childrenUnder5: number;
+  /** Extra visit columns (symptoms, WASH, prenatal, chronic, urgent_referral…). */
+  details?: VisitDetails;
+}
+
+export interface VisitDetails {
+  visit_reasons?: string[];
+  symptoms?: string[];
+  fever_symptom?: boolean;
+  symptom_duration?: number | null;
+  dehydration_signs?: string[];
+  wash_latrine?: boolean | null;
+  wash_latrine_condition?: string | null;
+  wash_handwashing?: boolean | null;
+  wash_soap?: boolean | null;
+  wash_trash?: boolean | null;
+  vaccines_status?: string | null;
+  vaccines_late?: string | null;
+  prenatal_weeks?: number | null;
+  prenatal_consults?: number | null;
+  bp_systolic?: number | null;
+  bp_diastolic?: number | null;
+  chronic_meds?: string | null;
+  glucose_mgdl?: number | null;
+  urgent_referral?: boolean;
 }
 
 /**
@@ -290,7 +319,8 @@ export async function confirmVisit(familyId: string, v: VisitInput): Promise<{ a
   if (result.ok) {
     const queue = getSyncQueue();
     const idx = queue.findIndex((r) => r.id === record.id);
-    if (idx !== -1) queue[idx] = { ...queue[idx], status: "synced" };
+    const existing = queue[idx];
+    if (existing) queue[idx] = { ...existing, status: "synced" };
     writeSyncQueue(queue);
     window.localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
     notifyFamiliesChanged();

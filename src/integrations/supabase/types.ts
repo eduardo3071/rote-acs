@@ -99,6 +99,8 @@ export type Database = {
           children_under5: number | null
           cluster_risk: boolean | null
           created_at: string | null
+          has_chronic: boolean
+          has_pregnant: boolean
           id: string
           last_visit_at: string | null
           lat: number
@@ -115,6 +117,8 @@ export type Database = {
           children_under5?: number | null
           cluster_risk?: boolean | null
           created_at?: string | null
+          has_chronic?: boolean
+          has_pregnant?: boolean
           id?: string
           last_visit_at?: string | null
           lat: number
@@ -131,6 +135,8 @@ export type Database = {
           children_under5?: number | null
           cluster_risk?: boolean | null
           created_at?: string | null
+          has_chronic?: boolean
+          has_pregnant?: boolean
           id?: string
           last_visit_at?: string | null
           lat?: number
@@ -191,44 +197,101 @@ export type Database = {
       visits: {
         Row: {
           acs_id: string | null
+          bp_diastolic: number | null
+          bp_systolic: number | null
           children_under5: number | null
+          chronic_meds: string | null
           created_at: string | null
+          dehydration_signs: string[] | null
           dhis2_exported_at: string | null
           family_id: string | null
+          fever_symptom: boolean | null
           gi_symptom: boolean | null
+          glucose_mgdl: number | null
           id: string
+          prenatal_consults: number | null
+          prenatal_weeks: number | null
           protocol_shown: string | null
+          symptom_duration: number | null
+          symptoms: string[] | null
           synced_at: string | null
+          urgent_referral: boolean
+          vaccines_late: string | null
+          vaccines_status: string | null
+          visit_reasons: string[] | null
           visited_at: string
           wash_guidance: string | null
+          wash_handwashing: boolean | null
+          wash_latrine: boolean | null
+          wash_latrine_condition: string | null
+          wash_soap: boolean | null
+          wash_trash: boolean | null
           water_source: string | null
         }
         Insert: {
           acs_id?: string | null
+          bp_diastolic?: number | null
+          bp_systolic?: number | null
           children_under5?: number | null
+          chronic_meds?: string | null
           created_at?: string | null
+          dehydration_signs?: string[] | null
           dhis2_exported_at?: string | null
           family_id?: string | null
+          fever_symptom?: boolean | null
           gi_symptom?: boolean | null
+          glucose_mgdl?: number | null
           id?: string
+          prenatal_consults?: number | null
+          prenatal_weeks?: number | null
           protocol_shown?: string | null
+          symptom_duration?: number | null
+          symptoms?: string[] | null
           synced_at?: string | null
+          urgent_referral?: boolean
+          vaccines_late?: string | null
+          vaccines_status?: string | null
+          visit_reasons?: string[] | null
           visited_at: string
           wash_guidance?: string | null
+          wash_handwashing?: boolean | null
+          wash_latrine?: boolean | null
+          wash_latrine_condition?: string | null
+          wash_soap?: boolean | null
+          wash_trash?: boolean | null
           water_source?: string | null
         }
         Update: {
           acs_id?: string | null
+          bp_diastolic?: number | null
+          bp_systolic?: number | null
           children_under5?: number | null
+          chronic_meds?: string | null
           created_at?: string | null
+          dehydration_signs?: string[] | null
           dhis2_exported_at?: string | null
           family_id?: string | null
+          fever_symptom?: boolean | null
           gi_symptom?: boolean | null
+          glucose_mgdl?: number | null
           id?: string
+          prenatal_consults?: number | null
+          prenatal_weeks?: number | null
           protocol_shown?: string | null
+          symptom_duration?: number | null
+          symptoms?: string[] | null
           synced_at?: string | null
+          urgent_referral?: boolean
+          vaccines_late?: string | null
+          vaccines_status?: string | null
+          visit_reasons?: string[] | null
           visited_at?: string
           wash_guidance?: string | null
+          wash_handwashing?: boolean | null
+          wash_latrine?: boolean | null
+          wash_latrine_condition?: string | null
+          wash_soap?: boolean | null
+          wash_trash?: boolean | null
           water_source?: string | null
         }
         Relationships: [
