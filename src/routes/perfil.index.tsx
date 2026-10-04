@@ -4,7 +4,7 @@ import { AlertCircle, CheckCircle2, Cloud, Copy, Database, Languages, Loader2, L
 import { BottomNav } from "@/components/BottomNav";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { exportToDhis2, getFamiliesCacheMeta, getLastSyncAt, getSyncQueueCounts, notifyFamiliesChanged, syncQueue } from "@/lib/territory";
+import { exportToDhis2, getFamiliesCacheMeta, getLastSyncAt, getSyncQueueCounts, refreshFamiliesNow, syncQueue } from "@/lib/territory";
 import { logout, updateTerritory } from "@/lib/session";
 import { useAgentSession } from "@/lib/useAgentSession";
 
@@ -121,9 +121,11 @@ function ProfilePage() {
     if (error) { setTerritoryError(error); return; }
     setTerritoryOverride(`${found.name}, ${uf}`);
     setTerritoryOpen(false);
-    // loadRemoteFamilies() re-reads the session (and its cod_ibge) fresh on every call, so this
-    // alone is enough to swap the family list — no page reload needed.
-    notifyFamiliesChanged();
+    // Perfil itself never calls useFamilies()/useFamily(), so nothing here would otherwise ever
+    // fetch the new territory's families — refreshFamiliesNow() forces that fetch (updating the
+    // local cache and notifying any other mounted screen), then refresh() re-reads it below.
+    await refreshFamiliesNow();
+    refresh();
   };
 
   if (!session) return <div className="field-surface min-h-screen" />;
@@ -151,6 +153,10 @@ function ProfilePage() {
           </div>
           <p className="text-small text-muted-foreground">
             {familiesCache.cachedAt ? `Último cache offline: ${formatSync(familiesCache.cachedAt)}` : "Ainda sem cache offline"}
+          </p>
+          <p className="text-label text-ink-faint">
+            Conta só o território ativo ({territoryOverride ?? (session.municipio ? `${session.municipio}, PA` : "—")}) —
+            trocar de município na seção abaixo troca esse número, não soma os dois.
           </p>
         </section>
 
