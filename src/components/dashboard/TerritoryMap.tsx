@@ -5,6 +5,8 @@ import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import type { Family } from "@/data/families";
 import { riskLevel, type RiskLevel } from "@/lib/risk";
 import { getGoogleMapsKey } from "@/lib/maps.functions";
+import { fill, useAppTranslations } from "@/lib/app-translations";
+import { localizedReason } from "@/lib/localized-family";
 
 const COLORS: Record<RiskLevel, string> = {
   low: "#19D98B",
@@ -43,6 +45,7 @@ function markerIcon(level: RiskLevel): google.maps.Symbol {
 
 /** Google Maps real do território: marcadores por risco, cluster pulsante e InfoWindow. */
 export function TerritoryMap({ families, focusId }: { families: Family[]; focusId?: string | undefined }) {
+  const { m } = useAppTranslations();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -86,7 +89,7 @@ export function TerritoryMap({ families, focusId }: { families: Family[]; focusI
         });
         setMap(m);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Não foi possível carregar o mapa.");
+        if (!cancelled) setError(e instanceof Error ? e.message : m.map.error);
       }
     })();
     return () => {
@@ -115,9 +118,9 @@ export function TerritoryMap({ families, focusId }: { families: Family[]; focusI
         info.setContent(`
           <div style="background:#111827;border:1px solid #1E2D45;border-radius:12px;padding:12px 14px;min-width:180px;font-family:Inter,sans-serif">
             <p style="margin:0;font-size:15px;font-weight:700;color:#F0F4FF">${f.name}</p>
-            <p style="margin:4px 0 0;font-size:13px;font-weight:700;color:${COLORS[level]}">Risco ${f.riskScore}</p>
-            <p style="margin:4px 0 10px;font-size:13px;color:#7B92B2">${f.riskReason}</p>
-            <button id="roteacs-infowin-btn" style="width:100%;height:36px;border:0;border-radius:8px;background:#16A8FF;color:#0A0F1E;font-size:13px;font-weight:700;cursor:pointer">Ver detalhes</button>
+            <p style="margin:4px 0 0;font-size:13px;font-weight:700;color:${COLORS[level]}">${fill(m.map.risk, { score: f.riskScore })}</p>
+            <p style="margin:4px 0 10px;font-size:13px;color:#7B92B2">${localizedReason(f, m)}</p>
+            <button id="roteacs-infowin-btn" style="width:100%;height:36px;border:0;border-radius:8px;background:#16A8FF;color:#0A0F1E;font-size:13px;font-weight:700;cursor:pointer">${m.map.details}</button>
           </div>`);
         info.open({ map, anchor: marker });
         google.maps.event.addListenerOnce(info, "domready", () => {
@@ -163,7 +166,7 @@ export function TerritoryMap({ families, focusId }: { families: Family[]; focusI
       circles.forEach((c) => c.setMap(null));
       info.close();
     };
-  }, [map, families, focusId, navigate]);
+  }, [map, families, focusId, navigate, m]);
 
   return (
     <div
@@ -177,11 +180,11 @@ export function TerritoryMap({ families, focusId }: { families: Family[]; focusI
         ref={containerRef}
         className={fullscreen ? "h-full w-full bg-background" : "h-64 w-full bg-background"}
         role="img"
-        aria-label="Mapa do território com as famílias coloridas por prioridade"
+        aria-label={m.map.aria}
       />
       {!map && !error && (
         <div className="absolute inset-0 flex items-center justify-center bg-background">
-          <p className="text-small text-muted-foreground">Carregando mapa…</p>
+          <p className="text-small text-muted-foreground">{m.map.loading}</p>
         </div>
       )}
       {error && (
@@ -192,20 +195,20 @@ export function TerritoryMap({ families, focusId }: { families: Family[]; focusI
       <button
         type="button"
         onClick={() => setFullscreen((v) => !v)}
-        aria-label={fullscreen ? "Sair da tela cheia" : "Ver mapa em tela cheia"}
+        aria-label={fullscreen ? m.map.exitFullscreen : m.map.enterFullscreen}
         className="absolute right-2 top-2 flex size-10 items-center justify-center rounded-lg border border-border bg-card/90 text-primary shadow-sm transition-colors active:bg-elevated"
       >
         {fullscreen ? <Minimize2 className="size-5" aria-hidden /> : <Maximize2 className="size-5" aria-hidden />}
       </button>
       <div className="absolute left-2 top-2 rounded-lg bg-card/90 p-2">
         <p className="flex items-center gap-1.5 text-label text-muted-foreground">
-          <span className="size-2 rounded-pill bg-risk-low" /> Monitoramento
+          <span className="size-2 rounded-pill bg-risk-low" /> {m.map.monitoring}
         </p>
         <p className="mt-1 flex items-center gap-1.5 text-label text-muted-foreground">
-          <span className="size-2 rounded-pill bg-risk-medium" /> Atenção
+          <span className="size-2 rounded-pill bg-risk-medium" /> {m.map.attention}
         </p>
         <p className="mt-1 flex items-center gap-1.5 text-label text-muted-foreground">
-          <span className="size-2 animate-pulse rounded-pill bg-risk-high" /> Cluster ativo
+          <span className="size-2 animate-pulse rounded-pill bg-risk-high" /> {m.map.cluster}
         </p>
       </div>
     </div>

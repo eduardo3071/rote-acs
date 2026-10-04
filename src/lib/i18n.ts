@@ -150,6 +150,8 @@ const pt = {
   "perfil.noMunicipalityData": "Nenhum município com dados carregados neste estado ainda.",
   "perfil.noDataLoaded": "(sem dados carregados)",
   "perfil.save": "Salvar",
+  "perfil.exportError": "Não foi possível gerar a exportação.",
+  "perfil.brazil": "Brasil",
 } as const;
 
 const en: Record<keyof typeof pt, string> = {
@@ -244,6 +246,8 @@ const en: Record<keyof typeof pt, string> = {
   "perfil.noMunicipalityData": "No municipality with loaded data in this state yet.",
   "perfil.noDataLoaded": "(no data loaded)",
   "perfil.save": "Save",
+  "perfil.exportError": "Could not generate the export.",
+  "perfil.brazil": "Brazil",
 };
 
 const es: Record<keyof typeof pt, string> = {
@@ -338,6 +342,8 @@ const es: Record<keyof typeof pt, string> = {
   "perfil.noMunicipalityData": "Aún no hay ningún municipio con datos cargados en este estado.",
   "perfil.noDataLoaded": "(sin datos cargados)",
   "perfil.save": "Guardar",
+  "perfil.exportError": "No se pudo generar la exportación.",
+  "perfil.brazil": "Brasil",
 };
 
 const DICTS: Record<Locale, Record<string, string>> = { "pt-BR": pt, en, es };

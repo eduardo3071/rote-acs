@@ -5,7 +5,7 @@ import {
   Loader2, Mic, Minus, Plus, Thermometer, Users, Wind, X, type LucideIcon,
 } from "lucide-react";
 import { PrimaryButton } from "@/components/PrimaryButton";
-import { getFamilyById, waterSourceLabels, type WaterSource } from "@/data/families";
+import { getFamilyById, type WaterSource } from "@/data/families";
 import { confirmVisit, useFamily } from "@/lib/territory";
 import { loadRemoteFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
@@ -14,6 +14,8 @@ import {
   isVoiceSupported, listenOnce, parseDehydrationSigns, parseLatrineCondition, parseNumber,
   parseReason, parseSymptoms, parseWaterSource, parseYesNo, parseYesNoUnknown, speak,
 } from "@/lib/voice";
+import { fill, useAppTranslations } from "@/lib/app-translations";
+import { localizedWater } from "@/lib/localized-family";
 
 export const Route = createFileRoute("/familias/$id/visita")({
   ssr: false,
@@ -30,42 +32,24 @@ export const Route = createFileRoute("/familias/$id/visita")({
       { property: "og:description", content: d }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] };
   },
   notFoundComponent: () => (
-    <div className="field-surface flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-subtitle font-bold text-foreground">Família não encontrada</p>
-      <Link to="/familias" className="text-body text-primary">Voltar para a lista</Link>
-    </div>
+    <VisitNotFound />
   ),
   component: VisitFlow,
 });
+
+function VisitNotFound() {
+  const { m } = useAppTranslations();
+  return <div className="field-surface flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+    <p className="text-subtitle font-bold text-foreground">{m.common.notFound}</p>
+    <Link to="/familias" className="text-body text-primary">{m.common.backToList}</Link>
+  </div>;
+}
 
 type SectionId = "reason" | "symptoms" | "wash" | "groups" | "chronic" | "confirm";
 type Tone = "good" | "bad" | "neutral";
 type Opt<T> = { label: string; value: T; tone: Tone };
 
-const REASONS: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: "routine", label: "Visita de rotina", icon: Calendar },
-  { id: "symptom", label: "Sintoma relatado", icon: AlertTriangle },
-  { id: "prenatal", label: "Acompanhamento de gestante", icon: Baby },
-  { id: "chronic", label: "Acompanhamento de doença crônica", icon: Heart },
-];
-const SYMPTOMS: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: "diarrhea", label: "Diarreia", icon: Droplets },
-  { id: "fever", label: "Febre", icon: Thermometer },
-  { id: "respiratory", label: "Tosse ou dificuldade de respirar", icon: Wind },
-  { id: "vomit", label: "Vômito", icon: X },
-  { id: "none", label: "Nenhum sintoma", icon: Check },
-];
-const DEHYDRATION = ["Olhos fundos", "Boca seca", "Criança letárgica"];
 const SOURCES: WaterSource[] = ["well", "river", "igarape", "tap", "other"];
-
-const YES_GOOD: Opt<boolean>[] = [{ label: "SIM", value: true, tone: "good" }, { label: "NÃO", value: false, tone: "bad" }];
-const YES_BAD: Opt<boolean>[] = [{ label: "SIM", value: true, tone: "bad" }, { label: "NÃO", value: false, tone: "good" }];
-const YES_NO_UNKNOWN: Opt<string>[] = [
-  { label: "SIM", value: "yes", tone: "good" }, { label: "NÃO", value: "no", tone: "bad" }, { label: "NÃO SEI", value: "unknown", tone: "neutral" },
-];
-const LATRINE_COND: Opt<string>[] = [
-  { label: "SIM", value: "good", tone: "good" }, { label: "NÃO", value: "bad", tone: "bad" }, { label: "NÃO SE APLICA", value: "na", tone: "neutral" },
-];
 
 const toneActive: Record<Tone, string> = {
   good: "border-risk-low bg-risk-low/20 text-risk-low",
@@ -80,6 +64,7 @@ const toneActive: Record<Tone, string> = {
  * blocks the ACS. Hidden entirely on browsers without Web Speech support.
  */
 function VoiceButton({ onTranscript }: { onTranscript: (transcript: string) => boolean }) {
+  const { m } = useAppTranslations();
   const [state, setState] = useState<"idle" | "listening" | "error">("idle");
   const [msg, setMsg] = useState<string | null>(null);
   if (!isVoiceSupported()) return null;
@@ -91,11 +76,11 @@ function VoiceButton({ onTranscript }: { onTranscript: (transcript: string) => b
       const transcript = await listenOnce();
       const ok = onTranscript(transcript);
       setState(ok ? "idle" : "error");
-      setMsg(ok ? null : `Não entendi "${transcript}". Toque de novo ou selecione manualmente.`);
+      setMsg(ok ? null : fill(m.visit.misunderstood, { text: transcript }));
       if (ok) window.dispatchEvent(new Event("roteacs:voice-used"));
     } catch (e) {
       setState("error");
-      setMsg(e instanceof Error ? e.message : "Erro no microfone.");
+      setMsg(e instanceof Error ? e.message : m.visit.micError);
     }
   };
 
@@ -105,7 +90,7 @@ function VoiceButton({ onTranscript }: { onTranscript: (transcript: string) => b
         className={cn("flex h-9 items-center gap-2 rounded-pill border px-3 text-label font-semibold",
           state === "listening" ? "border-primary bg-primary/15 text-primary" : "border-border bg-elevated text-muted-foreground")}>
         <Mic className={cn("size-3.5", state === "listening" && "animate-pulse")} aria-hidden />
-        {state === "listening" ? "Ouvindo…" : "Falar"}
+        {state === "listening" ? m.visit.listening : m.visit.speak}
       </button>
       {msg && <p className="text-label text-risk-high">{msg}</p>}
     </div>
@@ -144,6 +129,7 @@ function Choice<T>({ label, options, value, onChange, voiceParser }: {
 function Counter({ label, value, min, max, onChange, format, voice }: {
   label: string; value: number; min: number; max: number; onChange: (v: number) => void; format?: (v: number) => string; voice?: boolean;
 }) {
+  const { m } = useAppTranslations();
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
       <div className="flex items-center justify-between gap-2">
@@ -158,12 +144,12 @@ function Counter({ label, value, min, max, onChange, format, voice }: {
         )}
       </div>
       <div className="flex items-center justify-between">
-        <button type="button" aria-label="Diminuir" disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}
+        <button type="button" aria-label={m.visit.decrease} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}
           className="flex size-12 items-center justify-center rounded-lg border border-border bg-elevated text-primary disabled:opacity-40">
           <Minus className="size-5" aria-hidden />
         </button>
         <span className="text-title font-bold text-foreground" aria-live="polite">{format ? format(value) : value}</span>
-        <button type="button" aria-label="Aumentar" disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))}
+        <button type="button" aria-label={m.visit.increase} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))}
           className="flex size-12 items-center justify-center rounded-lg border border-border bg-elevated text-primary disabled:opacity-40">
           <Plus className="size-5" aria-hidden />
         </button>
@@ -187,8 +173,9 @@ function Caps({ children }: { children: ReactNode }) {
 }
 
 function Stepper({ total, current }: { total: number; current: number }) {
+  const { m } = useAppTranslations();
   return (
-    <ol className="flex items-center gap-1" aria-label={`Etapa ${current + 1} de ${total}`}>
+    <ol className="flex items-center gap-1" aria-label={fill(m.visit.step, { current: current + 1, total })}>
       {Array.from({ length: total }, (_, i) => {
         const state = i < current ? "done" : i === current ? "current" : "future";
         return (
@@ -210,10 +197,25 @@ function Stepper({ total, current }: { total: number; current: number }) {
 const toInt = (s: string) => (s ? Number(s) : null);
 
 function VisitFlow() {
+  const { m } = useAppTranslations();
   const { family: initial } = Route.useLoaderData();
   const family = useFamily(initial.id) ?? initial;
   useAgentSession();
   const navigate = useNavigate();
+  const REASONS: { id: string; label: string; icon: LucideIcon }[] = [
+    { id: "routine", label: m.visit.routine, icon: Calendar }, { id: "symptom", label: m.visit.reported, icon: AlertTriangle },
+    { id: "prenatal", label: m.visit.prenatal, icon: Baby }, { id: "chronic", label: m.visit.chronic, icon: Heart },
+  ];
+  const SYMPTOMS: { id: string; label: string; icon: LucideIcon }[] = [
+    { id: "diarrhea", label: m.visit.diarrhea, icon: Droplets }, { id: "fever", label: m.visit.fever, icon: Thermometer },
+    { id: "respiratory", label: m.visit.respiratory, icon: Wind }, { id: "vomit", label: m.visit.vomit, icon: X },
+    { id: "none", label: m.visit.noSymptoms, icon: Check },
+  ];
+  const DEHYDRATION = [m.visit.sunkenEyes, m.visit.dryMouth, m.visit.lethargic];
+  const YES_GOOD: Opt<boolean>[] = [{ label: m.common.yes, value: true, tone: "good" }, { label: m.common.no, value: false, tone: "bad" }];
+  const YES_BAD: Opt<boolean>[] = [{ label: m.common.yes, value: true, tone: "bad" }, { label: m.common.no, value: false, tone: "good" }];
+  const YES_NO_UNKNOWN: Opt<string>[] = [{ label: m.common.yes, value: "yes", tone: "good" }, { label: m.common.no, value: "no", tone: "bad" }, { label: m.common.unknown, value: "unknown", tone: "neutral" }];
+  const LATRINE_COND: Opt<string>[] = [{ label: m.common.yes, value: "good", tone: "good" }, { label: m.common.no, value: "bad", tone: "bad" }, { label: m.common.na, value: "na", tone: "neutral" }];
 
   const hasChildren = family.childrenUnder5 > 0;
   const hasPregnant = !!family.hasPregnant;
@@ -278,7 +280,7 @@ function VisitFlow() {
           return parsed;
         }
       } catch { /* no speech detected — fall through to retry/give-up below */ }
-      if (i === 0) await speak("Não entendi. Pode repetir?");
+      if (i === 0) await speak(m.visit.retryVoice);
     }
     return null;
   };
@@ -294,23 +296,23 @@ function VisitFlow() {
     setConversationMode("running");
     setIdx(0);
 
-    setConversationStatus("Ouvindo o motivo da visita…");
+    setConversationStatus(m.visit.listeningReason);
     const reason = await voiceAsk("Qual o motivo da visita? Diga rotina, sintoma, gestante ou crônica.", parseReason);
     if (reason === null) {
-      setConversationStatus("Não entendi o motivo. Toque para responder manualmente.");
+      setConversationStatus(m.visit.reasonManual);
       setConversationMode("idle");
       return;
     }
     setReasons([reason]);
     setIdx(1);
 
-    setConversationStatus("Ouvindo os sintomas…");
+    setConversationStatus(m.visit.listeningSymptoms);
     const symptomsFound = await voiceAsk(
       "A família apresenta diarreia, febre, tosse, vômito, ou nenhum sintoma?",
       (t) => { const found = parseSymptoms(t); return found.length > 0 ? found : null; },
     );
     if (symptomsFound === null) {
-      setConversationStatus("Não entendi os sintomas. Complete esta etapa manualmente.");
+      setConversationStatus(m.visit.symptomsManual);
       setConversationMode("idle");
       return;
     }
@@ -329,7 +331,7 @@ function VisitFlow() {
     }
 
     setIdx(2);
-    setConversationStatus("Ouvindo as condições de água e saneamento…");
+    setConversationStatus(m.visit.listeningWash);
 
     const waterSrc = await voiceAsk("Qual a fonte de água usada esta semana? Poço, rio, igarapé, torneira ou outra?", parseWaterSource);
     if (waterSrc !== null) setWater(waterSrc);
@@ -347,7 +349,7 @@ function VisitFlow() {
     if (trashOk !== null) setTrash(trashOk);
 
     await speak("Entrevista por voz concluída. Complete o restante das perguntas tocando na tela.");
-    setConversationStatus("Entrevista por voz concluída. Complete o restante manualmente.");
+    setConversationStatus(m.visit.voiceComplete);
     setConversationMode("done");
     setIdx(3);
   };
@@ -414,7 +416,7 @@ function VisitFlow() {
       });
       setResult({ ...r, urgent, symptomatic: diarrhea || fever });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Não foi possível salvar a visita. Tente novamente.");
+      setError(e instanceof Error ? e.message : m.visit.saveError);
     } finally {
       setSubmitting(false);
     }
@@ -425,62 +427,62 @@ function VisitFlow() {
       <div className="field-surface flex min-h-screen flex-col">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 text-center animate-rise-in">
           <CheckCircle2 className="size-16 text-risk-low" aria-hidden />
-          <h1 className="text-title font-bold text-risk-low">Visita registrada</h1>
-          <p className="text-small text-muted-foreground">Dados salvos no dispositivo.</p>
+          <h1 className="text-title font-bold text-risk-low">{m.visit.registered}</h1>
+          <p className="text-small text-muted-foreground">{m.visit.saved}</p>
           {usedVoice && (
             <p className="flex items-center gap-2 rounded-pill border border-primary/40 bg-primary/10 px-3 py-1.5 text-label font-semibold text-primary">
-              <Mic className="size-3.5 shrink-0" aria-hidden /> Processado por reconhecimento de voz (Small AI)
+              <Mic className="size-3.5 shrink-0" aria-hidden /> {m.visit.voiceProcessed}
             </p>
           )}
           {!result.synced && (
             <p className="flex items-center gap-2 rounded-lg border border-border bg-elevated p-4 text-small font-semibold text-muted-foreground">
-              <CloudOff className="size-4 shrink-0" aria-hidden /> Sem conexão — será enviada quando a internet voltar.
+              <CloudOff className="size-4 shrink-0" aria-hidden /> {m.visit.offlineSaved}
             </p>
           )}
           {result.urgent && (
             <p className="flex items-start gap-2 rounded-lg border border-risk-high bg-risk-high/15 p-4 text-left text-small font-semibold text-risk-high">
               <AlertTriangle className="size-5 shrink-0" aria-hidden />
-              Encaminhamento urgente recomendado — leve esta família à clínica o quanto antes.
+              {m.visit.urgent}
             </p>
           )}
           {result.affected > 0 && (
             <p className="flex items-start gap-2 rounded-lg border border-risk-medium bg-risk-medium/15 p-4 text-left text-small font-semibold text-risk-medium">
               <Users className="size-5 shrink-0" aria-hidden />
-              {result.affected === 1 ? "1 família vizinha foi atualizada para alta prioridade." : `${result.affected} famílias vizinhas foram atualizadas para alta prioridade.`}
+              {result.affected === 1 ? m.visit.oneNeighbor : fill(m.visit.neighbors, { count: result.affected })}
             </p>
           )}
           {result.symptomatic && (
             <Link to="/familias/$id/protocolo" params={{ id: family.id }}
               search={{ vizinhos: result.affected, pendente: !result.synced, urgente: result.urgent }}
-              className="text-body font-semibold text-primary">Ver protocolo de cuidado</Link>
+              className="text-body font-semibold text-primary">{m.visit.careProtocol}</Link>
           )}
         </div>
         <div className="mx-auto flex w-full max-w-md flex-col gap-2 px-6 pb-8">
-          <PrimaryButton onClick={() => navigate({ to: "/familias" })}>Ver prioridades</PrimaryButton>
-          <button onClick={reset} className="h-14 rounded-lg border border-border bg-elevated text-body font-semibold text-primary">Registrar outra</button>
+          <PrimaryButton onClick={() => navigate({ to: "/familias" })}>{m.visit.viewPriorities}</PrimaryButton>
+          <button onClick={reset} className="h-14 rounded-lg border border-border bg-elevated text-body font-semibold text-primary">{m.visit.another}</button>
         </div>
       </div>
     );
   }
 
   const summary: { title: string; value: string }[] = [
-    { title: "Motivo da visita", value: REASONS.filter((r) => reasons.includes(r.id)).map((r) => r.label).join(", ") || "—" },
+    { title: m.visit.summaryReason, value: REASONS.filter((r) => reasons.includes(r.id)).map((r) => r.label).join(", ") || "—" },
     {
-      title: "Sintomas",
+      title: m.visit.summarySymptoms,
       value: (SYMPTOMS.filter((s) => symptoms.includes(s.id)).map((s) => s.label).join(", ") || "—") +
-        (showDuration ? ` · ${duration >= 7 ? "7 ou mais dias" : duration === 1 ? "1 dia" : `${duration} dias`}` : "") +
-        (urgent ? ` · Desidratação: ${dehydration.join(", ")}` : ""),
+        (showDuration ? ` · ${duration >= 7 ? m.visit.sevenDays : duration === 1 ? m.visit.oneDay : fill(m.visit.days, { count: duration })}` : "") +
+        (urgent ? ` · ${m.visit.dehydration}: ${dehydration.join(", ")}` : ""),
     },
     {
-      title: "Condições WASH",
-      value: [`Água: ${waterSourceLabels[water]}`,
-        latrine !== null && `Latrina: ${latrine ? "sim" : "não"}`,
-        handwash !== null && `Lavagem de mãos: ${handwash ? "sim" : "não"}`,
-        trash !== null && `Lixo a céu aberto: ${trash ? "sim" : "não"}`].filter(Boolean).join(" · "),
+      title: m.visit.summaryWash,
+      value: [`${m.visit.water}: ${localizedWater(water, m)}`,
+        latrine !== null && `${m.visit.latrine}: ${latrine ? m.common.yes : m.common.no}`,
+        handwash !== null && `${m.visit.handwashing}: ${handwash ? m.common.yes : m.common.no}`,
+        trash !== null && `${m.visit.openTrash}: ${trash ? m.common.yes : m.common.no}`].filter(Boolean).join(" · "),
     },
   ];
-  const groups = [hasChildren && "Crianças menores de 5", hasPregnant && "Gestante", hasChronic && "Doença crônica"].filter(Boolean);
-  if (groups.length) summary.push({ title: "Grupos atendidos", value: groups.join(", ") });
+  const groups = [hasChildren && m.visit.underFive, hasPregnant && m.visit.pregnant, hasChronic && m.visit.chronicGroup].filter(Boolean);
+  if (groups.length) summary.push({ title: m.visit.servedGroups, value: groups.join(", ") });
 
   return (
     <div className="field-surface min-h-screen">
@@ -489,9 +491,9 @@ function VisitFlow() {
           <button onClick={() => (idx > 0 ? setIdx(idx - 1) : navigate({ to: "/familias/$id", params: { id: family.id } }))}
             disabled={conversationMode === "running"}
             className="flex items-center gap-2 text-body text-primary disabled:opacity-40">
-            <ArrowLeft className="size-5" aria-hidden /> {idx > 0 ? "Voltar" : family.name}
+            <ArrowLeft className="size-5" aria-hidden /> {idx > 0 ? m.visit.previous : family.name}
           </button>
-          <span className="label-caps text-muted-foreground">Etapa {idx + 1}/{sections.length}</span>
+          <span className="label-caps text-muted-foreground">{fill(m.visit.stepShort, { current: idx + 1, total: sections.length })}</span>
         </div>
         <Stepper total={sections.length} current={idx} />
 
@@ -505,16 +507,16 @@ function VisitFlow() {
 
         {section === "reason" && (
           <section key="reason" className="flex flex-col gap-4 animate-rise-in">
-            <h1 className="text-center text-subtitle font-bold text-foreground">Qual o motivo da visita?</h1>
+            <h1 className="text-center text-subtitle font-bold text-foreground">{m.visit.reasonQuestion}</h1>
             {isVoiceSupported() && conversationMode !== "running" && (
               <div className="flex flex-col gap-1">
                 <button type="button" onClick={runConversation}
                   className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-primary bg-primary/10 text-body font-bold text-primary">
-                  <Mic className="size-5" aria-hidden /> Iniciar entrevista por voz
-                  <span className="rounded-pill border border-primary/40 bg-primary/15 px-2 py-0.5 text-label font-semibold text-primary">IA on-device</span>
+                  <Mic className="size-5" aria-hidden /> {m.visit.startVoice}
+                  <span className="rounded-pill border border-primary/40 bg-primary/15 px-2 py-0.5 text-label font-semibold text-primary">{m.visit.onDevice}</span>
                 </button>
                 <p className="text-center text-label text-muted-foreground">
-                  Reconhece sua resposta no próprio celular, sem internet — mais rápido que digitar com as mãos ocupadas em campo.
+                  {m.visit.voiceHelp}
                 </p>
               </div>
             )}
@@ -534,7 +536,7 @@ function VisitFlow() {
         {section === "symptoms" && (
           <section key="symptoms" className="flex flex-col gap-4 animate-rise-in">
             <div className="flex items-center justify-between gap-2">
-              <h1 className="text-subtitle font-bold text-foreground">A família apresenta algum destes sintomas?</h1>
+              <h1 className="text-subtitle font-bold text-foreground">{m.visit.symptomsQuestion}</h1>
               <VoiceButton onTranscript={(t) => {
                 const found = parseSymptoms(t);
                 if (found.length === 0) return false;
@@ -558,13 +560,13 @@ function VisitFlow() {
               })}
             </div>
             {showDuration && (
-              <Counter label="Há quantos dias?" value={duration} min={1} max={7} onChange={setDuration} voice
-                format={(v) => (v >= 7 ? "7 ou mais dias" : v === 1 ? "1 dia" : `${v} dias`)} />
+              <Counter label={m.visit.duration} value={duration} min={1} max={7} onChange={setDuration} voice
+                format={(v) => (v >= 7 ? m.visit.sevenDays : v === 1 ? m.visit.oneDay : fill(m.visit.days, { count: v }))} />
             )}
             {showDehydration && (
               <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-body font-semibold text-foreground">Sinais de desidratação?</span>
+                  <span className="text-body font-semibold text-foreground">{m.visit.dehydrationQuestion}</span>
                   <VoiceButton onTranscript={(t) => {
                     const found = parseDehydrationSigns(t);
                     if (found.length === 0) return false;
@@ -591,10 +593,10 @@ function VisitFlow() {
 
         {section === "wash" && (
           <section key="wash" className="flex flex-col gap-4 animate-rise-in">
-            <h1 className="text-subtitle font-bold text-foreground">Condições observadas na visita</h1>
+            <h1 className="text-subtitle font-bold text-foreground">{m.visit.washTitle}</h1>
             <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-body text-foreground">Fonte de água usada esta semana</span>
+                <span className="text-body text-foreground">{m.visit.waterWeek}</span>
                 <VoiceButton onTranscript={(t) => {
                   const parsed = parseWaterSource(t);
                   if (!parsed) return false;
@@ -604,39 +606,39 @@ function VisitFlow() {
               </div>
               <select value={water} onChange={(e) => setWater(e.target.value as WaterSource)}
                 className="h-12 rounded-lg border border-border bg-card px-4 text-body text-foreground outline-none focus:border-primary">
-                {SOURCES.map((s) => <option key={s} value={s}>{waterSourceLabels[s]}</option>)}
+                {SOURCES.map((s) => <option key={s} value={s}>{localizedWater(s, m)}</option>)}
               </select>
             </div>
-            <Choice label="Latrina ou banheiro disponível?" options={YES_GOOD} value={latrine} onChange={setLatrine} voiceParser={parseYesNo} />
-            <Choice label="Latrina coberta e em boas condições?" options={LATRINE_COND} value={latrineCond} onChange={setLatrineCond} voiceParser={parseLatrineCondition} />
-            <Choice label="Ponto de lavagem de mãos com sabão visível?" options={YES_GOOD} value={handwash} onChange={setHandwash} voiceParser={parseYesNo} />
-            <Choice label="Lixo a céu aberto próximo à casa?" options={YES_BAD} value={trash} onChange={setTrash} voiceParser={parseYesNo} />
+            <Choice label={m.visit.latrineAvailable} options={YES_GOOD} value={latrine} onChange={setLatrine} voiceParser={parseYesNo} />
+            <Choice label={m.visit.latrineGood} options={LATRINE_COND} value={latrineCond} onChange={setLatrineCond} voiceParser={parseLatrineCondition} />
+            <Choice label={m.visit.handwashVisible} options={YES_GOOD} value={handwash} onChange={setHandwash} voiceParser={parseYesNo} />
+            <Choice label={m.visit.trashNearby} options={YES_BAD} value={trash} onChange={setTrash} voiceParser={parseYesNo} />
           </section>
         )}
 
         {section === "groups" && (
           <section key="groups" className="flex flex-col gap-4 animate-rise-in">
-            <h1 className="text-subtitle font-bold text-foreground">Grupos prioritários</h1>
+            <h1 className="text-subtitle font-bold text-foreground">{m.visit.priorityGroups}</h1>
             {hasChildren && (
               <>
-                <Caps>Crianças</Caps>
-                <Choice label="Vacinas em dia?" options={YES_NO_UNKNOWN} value={vaccines} onChange={setVaccines} voiceParser={parseYesNoUnknown} />
+                <Caps>{m.visit.children}</Caps>
+                <Choice label={m.visit.vaccinesCurrent} options={YES_NO_UNKNOWN} value={vaccines} onChange={setVaccines} voiceParser={parseYesNoUnknown} />
                 {vaccines === "no" && (
-                  <input value={vaccinesLate} onChange={(e) => setVaccinesLate(e.target.value)} placeholder="Quais vacinas estão atrasadas?"
+                  <input value={vaccinesLate} onChange={(e) => setVaccinesLate(e.target.value)} placeholder={m.visit.vaccinesPlaceholder}
                     className="h-12 rounded-lg border border-border bg-card px-4 text-small text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" />
                 )}
               </>
             )}
             {hasPregnant && (
               <>
-                <Caps>Gestante</Caps>
-                <Counter label="Semanas de gestação" value={weeks} min={1} max={42} onChange={setWeeks} />
-                <Counter label="Consultas de pré-natal realizadas" value={consults} min={0} max={12} onChange={setConsults} />
-                <Choice label="Pressão arterial aferida nesta visita?" options={YES_GOOD} value={pBp} onChange={setPBp} />
+                <Caps>{m.visit.pregnant}</Caps>
+                <Counter label={m.visit.pregnancyWeeks} value={weeks} min={1} max={42} onChange={setWeeks} />
+                <Counter label={m.visit.prenatalVisits} value={consults} min={0} max={12} onChange={setConsults} />
+                <Choice label={m.visit.bpVisit} options={YES_GOOD} value={pBp} onChange={setPBp} />
                 {pBp && (
                   <div className="flex gap-2">
-                    <NumField label="Sistólica (mmHg)" value={pSys} onChange={setPSys} />
-                    <NumField label="Diastólica (mmHg)" value={pDia} onChange={setPDia} />
+                    <NumField label={m.visit.systolic} value={pSys} onChange={setPSys} />
+                    <NumField label={m.visit.diastolic} value={pDia} onChange={setPDia} />
                   </div>
                 )}
               </>
@@ -646,23 +648,23 @@ function VisitFlow() {
 
         {section === "chronic" && (
           <section key="chronic" className="flex flex-col gap-4 animate-rise-in">
-            <h1 className="text-subtitle font-bold text-foreground">Acompanhamento de saúde</h1>
-            <Choice label="Tomou os medicamentos prescritos nos últimos 7 dias?" options={YES_NO_UNKNOWN} value={meds} onChange={setMeds} />
-            <Choice label="Pressão arterial aferida?" options={YES_GOOD} value={cBp} onChange={setCBp} />
+            <h1 className="text-subtitle font-bold text-foreground">{m.visit.healthFollowup}</h1>
+            <Choice label={m.visit.tookMeds} options={YES_NO_UNKNOWN} value={meds} onChange={setMeds} />
+            <Choice label={m.visit.bpTaken} options={YES_GOOD} value={cBp} onChange={setCBp} />
             {cBp && (
               <div className="flex gap-2">
-                <NumField label="Sistólica (mmHg)" value={cSys} onChange={setCSys} />
-                <NumField label="Diastólica (mmHg)" value={cDia} onChange={setCDia} />
+                <NumField label={m.visit.systolic} value={cSys} onChange={setCSys} />
+                <NumField label={m.visit.diastolic} value={cDia} onChange={setCDia} />
               </div>
             )}
-            <Choice label="Glicemia capilar aferida?" options={YES_GOOD} value={gluc} onChange={setGluc} />
-            {gluc && <NumField label="Resultado (mg/dL)" value={glucVal} onChange={setGlucVal} />}
+            <Choice label={m.visit.glucoseTaken} options={YES_GOOD} value={gluc} onChange={setGluc} />
+            {gluc && <NumField label={m.visit.result} value={glucVal} onChange={setGlucVal} />}
           </section>
         )}
 
         {section === "confirm" && (
           <section key="confirm" className="flex flex-col gap-4 animate-rise-in">
-            <h1 className="text-title font-bold text-foreground">Resumo da visita</h1>
+            <h1 className="text-title font-bold text-foreground">{m.visit.summary}</h1>
             {summary.map((s) => (
               <div key={s.title} className="flex flex-col gap-1 rounded-lg border border-border bg-card p-4">
                 <Caps>{s.title}</Caps>
@@ -671,7 +673,7 @@ function VisitFlow() {
             ))}
             {urgent && (
               <p className="flex items-center gap-2 text-small font-semibold text-risk-high">
-                <AlertTriangle className="size-4 shrink-0" aria-hidden /> Sinais de desidratação — encaminhamento urgente.
+                <AlertTriangle className="size-4 shrink-0" aria-hidden /> {m.visit.urgentDehydration}
               </p>
             )}
             {error && (
@@ -687,10 +689,10 @@ function VisitFlow() {
         <div className="mx-auto max-w-md px-6 py-4">
           {section === "confirm" ? (
             <PrimaryButton onClick={confirm} disabled={submitting} arrow={false} className="rounded-md">
-              {submitting ? <><Loader2 className="!size-5 animate-spin" aria-hidden /> Salvando…</> : "Confirmar visita"}
+              {submitting ? <><Loader2 className="!size-5 animate-spin" aria-hidden /> {m.visit.saving}</> : m.visit.confirm}
             </PrimaryButton>
           ) : (
-            <PrimaryButton onClick={() => setIdx(idx + 1)} disabled={!canNext || conversationMode === "running"}>Próximo</PrimaryButton>
+            <PrimaryButton onClick={() => setIdx(idx + 1)} disabled={!canNext || conversationMode === "running"}>{m.common.next}</PrimaryButton>
           )}
         </div>
       </div>

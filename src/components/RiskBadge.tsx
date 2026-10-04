@@ -1,5 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
+import { fill, useAppTranslations } from "@/lib/app-translations";
 
 export type RiskLevel = "high" | "medium" | "low";
 
@@ -55,13 +56,15 @@ export function RiskBadge({
   label,
   ...props
 }: RiskBadgeProps) {
+  const { m } = useAppTranslations();
   const value = clampScore(riskScore ?? score ?? 0);
   const resolved = level ?? riskLevel(value);
+  const riskLabel = resolved === "high" ? m.risk.highAria : resolved === "medium" ? m.risk.mediumAria : m.risk.lowAria;
 
   return (
     <div
       role="img"
-      aria-label={label ?? `${riskLabels[resolved]}, ${value} de 100`}
+      aria-label={label ?? fill(m.risk.scoreAria, { level: riskLabel, score: value })}
       className={cn(riskBadgeVariants({ level: resolved }), className)}
       {...props}
     >
