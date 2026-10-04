@@ -1,18 +1,17 @@
-import { priorityShort, type RiskFilterValue } from "@/lib/risk";
+import { type RiskFilterValue } from "@/lib/risk";
 import { cn } from "@/lib/utils";
-
-const options: { value: RiskFilterValue; label: string }[] = [
-  { value: "all", label: "Todas" },
-  { value: "high", label: priorityShort.high },
-  { value: "medium", label: priorityShort.medium },
-  { value: "low", label: priorityShort.low },
-];
+import { useAppTranslations } from "@/lib/app-translations";
 
 export function RiskFilter({ value, onChange, counts }: {
   value: RiskFilterValue; onChange: (v: RiskFilterValue) => void; counts: Record<RiskFilterValue, number>;
 }) {
+  const { m } = useAppTranslations();
+  const options = [
+    { value: "all", label: m.familiesList.all }, { value: "high", label: m.risk.highShort },
+    { value: "medium", label: m.risk.mediumShort }, { value: "low", label: m.risk.lowShort },
+  ] satisfies { value: RiskFilterValue; label: string }[];
   return (
-    <div role="tablist" aria-label="Filtrar por prioridade" className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 [scrollbar-width:none]">
+    <div role="tablist" aria-label={m.familiesList.filter} className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 [scrollbar-width:none]">
       {options.map((o) => {
         const active = o.value === value;
         return (

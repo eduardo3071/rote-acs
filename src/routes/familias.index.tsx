@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { useFamilies } from "@/lib/territory";
 import { countByLevel, matchesFilter, type RiskFilterValue } from "@/lib/risk";
+import { fill, useAppTranslations } from "@/lib/app-translations";
 
 export const Route = createFileRoute("/familias/")({
   head: () => ({
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/familias/")({
 });
 
 function FamiliesList() {
+  const { m } = useAppTranslations();
   const session = useAgentSession();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RiskFilterValue>("all");
@@ -42,16 +44,16 @@ function FamiliesList() {
     <div className="field-surface min-h-screen">
       <div className="mx-auto flex max-w-md flex-col gap-4 px-6 pb-24 pt-6 md:max-w-2xl">
         <header className="flex items-center gap-4">
-          <Link to="/dashboard" aria-label="Voltar ao painel"
+          <Link to="/dashboard" aria-label={m.familiesList.back}
             className="grid size-10 shrink-0 place-items-center rounded-lg border border-border bg-card text-foreground">
             <ArrowLeft className="size-5" />
           </Link>
           <div className="min-w-0">
-            <h1 className="text-title font-bold text-foreground">Famílias do território</h1>
+            <h1 className="text-title font-bold text-foreground">{m.familiesList.title}</h1>
             <p className="flex items-center gap-2 text-small text-muted-foreground">
-              {all.length} famílias
+              {fill(m.familiesList.count, { count: all.length })}
               <span className="inline-flex items-center gap-1 text-primary">
-                <ArrowDownWideNarrow className="size-3" aria-hidden /> Ordenadas por prioridade
+                <ArrowDownWideNarrow className="size-3" aria-hidden /> {m.familiesList.sorted}
               </span>
             </p>
           </div>
@@ -63,15 +65,15 @@ function FamiliesList() {
         </div>
 
         {!session ? (
-          <ul className="flex flex-col gap-2" aria-label="Carregando">
+          <ul className="flex flex-col gap-2" aria-label={m.familiesList.loading}>
             {[0, 1, 2, 3].map((i) => <li key={i} className="h-24 animate-pulse rounded-lg border border-border bg-card" />)}
           </ul>
         ) : visible.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-12 text-center">
             <SearchX className="size-8 text-muted-foreground" aria-hidden />
-            <p className="text-body font-semibold text-foreground">Nenhuma família encontrada</p>
+            <p className="text-body font-semibold text-foreground">{m.familiesList.empty}</p>
             <p className="text-small text-muted-foreground">
-              {all.length === 0 ? "Ainda não há famílias no território." : query ? "Tente outro nome ou limpe a busca." : "Nenhuma família nesta prioridade."}
+              {all.length === 0 ? m.familiesList.noneTerritory : query ? m.familiesList.trySearch : m.familiesList.nonePriority}
             </p>
           </div>
         ) : (
