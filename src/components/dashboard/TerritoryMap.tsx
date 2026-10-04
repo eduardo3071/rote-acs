@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import type { Family } from "@/data/families";
 import { riskLevel, type RiskLevel } from "@/lib/risk";
@@ -46,6 +47,16 @@ export function TerritoryMap({ families, focusId }: { families: Family[]; focusI
   const containerRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // Ao alternar tela cheia, o mapa precisa recalcular o tamanho e recentralizar.
+  useEffect(() => {
+    if (!map) return;
+    const t = window.setTimeout(() => {
+      google.maps.event.trigger(map, "resize");
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [map, fullscreen]);
 
   // Carrega a Maps JS API uma vez e cria o mapa.
   useEffect(() => {
@@ -155,10 +166,16 @@ export function TerritoryMap({ families, focusId }: { families: Family[]; focusI
   }, [map, families, focusId, navigate]);
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border">
+    <div
+      className={
+        fullscreen
+          ? "fixed inset-0 z-50 bg-background"
+          : "relative overflow-hidden rounded-lg border border-border"
+      }
+    >
       <div
         ref={containerRef}
-        className="h-64 w-full bg-background"
+        className={fullscreen ? "h-full w-full bg-background" : "h-64 w-full bg-background"}
         role="img"
         aria-label="Mapa do território com as famílias coloridas por prioridade"
       />
@@ -172,6 +189,14 @@ export function TerritoryMap({ families, focusId }: { families: Family[]; focusI
           <p className="text-small text-risk-high">{error}</p>
         </div>
       )}
+      <button
+        type="button"
+        onClick={() => setFullscreen((v) => !v)}
+        aria-label={fullscreen ? "Sair da tela cheia" : "Ver mapa em tela cheia"}
+        className="absolute right-2 top-2 flex size-10 items-center justify-center rounded-lg border border-border bg-card/90 text-primary shadow-sm transition-colors active:bg-elevated"
+      >
+        {fullscreen ? <Minimize2 className="size-5" aria-hidden /> : <Maximize2 className="size-5" aria-hidden />}
+      </button>
       <div className="absolute left-2 top-2 rounded-lg bg-card/90 p-2">
         <p className="flex items-center gap-1.5 text-label text-muted-foreground">
           <span className="size-2 rounded-pill bg-risk-low" /> Monitoramento
