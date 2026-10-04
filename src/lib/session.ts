@@ -40,3 +40,10 @@ export async function login(agentCode: string, password: string): Promise<{ erro
 export async function logout() {
   await supabase.auth.signOut();
 }
+
+/** Updates the agent's territory (país > estado > município) on the `acs` row. */
+export async function updateTerritory(acsId: string, territory: string): Promise<{ error?: string }> {
+  const { error } = await supabase.from("acs").update({ territory }).eq("id", acsId);
+  if (error) return { error: "Não foi possível salvar o território." };
+  return {};
+}

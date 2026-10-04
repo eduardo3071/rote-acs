@@ -23,17 +23,24 @@ interface DatasetRow {
 const DATASETS: DatasetRow[] = [
   {
     name: "Coordenadas de domicílios",
-    source: "IBGE CNEFE 2022",
+    source: "IBGE CNEFE 2022 — equivalente brasileiro ao WorldPop/OpenStreetMap sugeridos no Annex A (seção 7.3-C) para base geográfica",
     license: "Domínio público",
     covers: "Latitude/longitude reais de 50 domicílios em Anapu, PA (código IBGE 1500859).",
     doesNotCover: "Não está ligado a moradores reais — nomes de família e histórico clínico nessas coordenadas são fictícios, criados só para a demonstração.",
   },
   {
     name: "Unidades de saúde (UBS)",
-    source: "CNES/DATASUS 2024",
+    source: "CNES/DATASUS 2024 — equivalente brasileiro ao healthsites.io e ao Service Delivery Indicators sugeridos no Annex A para registro de unidades de saúde",
     license: "Dado público",
     covers: "2 UBS reais de Anapu-PA (ESF Dinora Terezinha, ESF Vila Nova Canaã) — nome e tipo verdadeiros.",
     doesNotCover: "Coordenadas aproximadas ao centro do município, não ao endereço exato — a consulta geográfica do CNES ficou bloqueada na rede de desenvolvimento.",
+  },
+  {
+    name: "Interoperabilidade de dados (exportação)",
+    source: "DHIS2 — citado nominalmente no Annex A como \"o sistema que seu registro mais plausivelmente alimentaria\"",
+    license: "Software livre (BSD-3), padrão aberto de dados",
+    covers: "Exportação das visitas sincronizadas no formato de evento compatível com DHIS2, o sistema de informação em saúde usado por ministérios da saúde em mais de 70 países, incluindo o SUS no Brasil.",
+    doesNotCover: "Esta demo gera o JSON compatível para o agente copiar/baixar; não envia para uma instância real de DHIS2 — a integração direta por API fica para uma próxima etapa.",
   },
   {
     name: "Sinais de alerta clínico",
