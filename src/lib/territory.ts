@@ -302,6 +302,8 @@ export interface VisitDetails {
   chronic_meds?: string | null;
   glucose_mgdl?: number | null;
   urgent_referral?: boolean;
+  /** True if any answer in this visit was captured via voice recognition (Small AI). */
+  voice_input?: boolean;
 }
 
 /**

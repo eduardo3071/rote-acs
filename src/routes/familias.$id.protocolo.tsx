@@ -7,7 +7,11 @@ import { useFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
 
 export const Route = createFileRoute("/familias/$id/protocolo")({
-  validateSearch: z.object({ vizinhos: z.number().int().min(0).optional(), pendente: z.boolean().optional() }),
+  validateSearch: z.object({
+    vizinhos: z.number().int().min(0).optional(),
+    pendente: z.boolean().optional(),
+    urgente: z.boolean().optional(),
+  }),
   loader: ({ params }) => {
     const family = getFamilyById(params.id);
     if (!family) throw notFound();
@@ -41,7 +45,7 @@ const WASH: Partial<Record<WaterSource, string>> = {
   tap: "Verifique se o recipiente de armazenamento tem tampa.",
 };
 
-/** Shown only when the data flags severe symptoms. The current model has no such field, so it stays off. */
+/** Shown when the visit flagged IMCI dehydration danger signs — encaminhamento urgente. */
 export function ReferralCard() {
   return (
     <div role="alert" className="flex gap-4 rounded-lg border border-risk-high bg-risk-high/15 p-4">
@@ -55,12 +59,12 @@ export function ReferralCard() {
 
 function ProtocolPage() {
   const { family: base } = Route.useLoaderData();
-  const { vizinhos = 0, pendente = false } = Route.useSearch();
+  const { vizinhos = 0, pendente = false, urgente = false } = Route.useSearch();
   useAgentSession();
   const navigate = useNavigate();
   const family = useFamily(base.id) ?? base;
   const wash = WASH[family.waterSource];
-  const severe = false; // no severe-symptom field in the model yet
+  const severe = urgente;
 
   return (
     <div className="field-surface min-h-screen">

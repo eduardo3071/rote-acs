@@ -1,14 +1,18 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertCircle, AlertTriangle, ArrowLeft, Baby, Calendar, Check, CheckCircle2, CloudOff, Droplets, Heart,
-  Loader2, Minus, Plus, Thermometer, Users, Wind, X, type LucideIcon,
+  Loader2, Mic, Minus, Plus, Thermometer, Users, Wind, X, type LucideIcon,
 } from "lucide-react";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { getFamilyById, waterSourceLabels, type WaterSource } from "@/data/families";
 import { confirmVisit, useFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { cn } from "@/lib/utils";
+import {
+  isVoiceSupported, listenOnce, parseDehydrationSigns, parseLatrineCondition, parseNumber,
+  parseSymptoms, parseWaterSource, parseYesNo, parseYesNoUnknown,
+} from "@/lib/voice";
 
 export const Route = createFileRoute("/familias/$id/visita")({
   loader: ({ params }) => {
@@ -67,10 +71,61 @@ const toneActive: Record<Tone, string> = {
   neutral: "border-primary bg-primary/20 text-primary",
 };
 
-function Choice<T>({ label, options, value, onChange }: { label: string; options: Opt<T>[]; value: T | null; onChange: (v: T) => void }) {
+/**
+ * Push-to-talk mic button: tap, speak, the Web Speech API (native, pt-BR) transcribes,
+ * and `onTranscript` parses it against a closed vocabulary. Voice is always additive —
+ * every question keeps its tap controls, so a failed/unsupported recognition never
+ * blocks the ACS. Hidden entirely on browsers without Web Speech support.
+ */
+function VoiceButton({ onTranscript }: { onTranscript: (transcript: string) => boolean }) {
+  const [state, setState] = useState<"idle" | "listening" | "error">("idle");
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!isVoiceSupported()) return null;
+
+  const run = async () => {
+    setState("listening");
+    setMsg(null);
+    try {
+      const transcript = await listenOnce();
+      const ok = onTranscript(transcript);
+      setState(ok ? "idle" : "error");
+      setMsg(ok ? null : `Não entendi "${transcript}". Toque de novo ou selecione manualmente.`);
+      if (ok) window.dispatchEvent(new Event("roteacs:voice-used"));
+    } catch (e) {
+      setState("error");
+      setMsg(e instanceof Error ? e.message : "Erro no microfone.");
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <button type="button" onClick={run} disabled={state === "listening"}
+        className={cn("flex h-9 items-center gap-2 rounded-pill border px-3 text-label font-semibold",
+          state === "listening" ? "border-primary bg-primary/15 text-primary" : "border-border bg-elevated text-muted-foreground")}>
+        <Mic className={cn("size-3.5", state === "listening" && "animate-pulse")} aria-hidden />
+        {state === "listening" ? "Ouvindo…" : "Falar"}
+      </button>
+      {msg && <p className="text-label text-risk-high">{msg}</p>}
+    </div>
+  );
+}
+
+function Choice<T>({ label, options, value, onChange, voiceParser }: {
+  label: string; options: Opt<T>[]; value: T | null; onChange: (v: T) => void; voiceParser?: (transcript: string) => T | null;
+}) {
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-      <span className="text-body text-foreground">{label}</span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-body text-foreground">{label}</span>
+        {voiceParser && (
+          <VoiceButton onTranscript={(t) => {
+            const parsed = voiceParser(t);
+            if (parsed === null) return false;
+            onChange(parsed);
+            return true;
+          }} />
+        )}
+      </div>
       <div className="flex gap-2">
         {options.map((o) => (
           <button key={o.label} type="button" onClick={() => onChange(o.value)} aria-pressed={value === o.value}
@@ -84,10 +139,22 @@ function Choice<T>({ label, options, value, onChange }: { label: string; options
   );
 }
 
-function Counter({ label, value, min, max, onChange, format }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void; format?: (v: number) => string }) {
+function Counter({ label, value, min, max, onChange, format, voice }: {
+  label: string; value: number; min: number; max: number; onChange: (v: number) => void; format?: (v: number) => string; voice?: boolean;
+}) {
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-      <span className="text-body text-foreground">{label}</span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-body text-foreground">{label}</span>
+        {voice && (
+          <VoiceButton onTranscript={(t) => {
+            const n = parseNumber(t, max);
+            if (n === null) return false;
+            onChange(Math.max(min, n));
+            return true;
+          }} />
+        )}
+      </div>
       <div className="flex items-center justify-between">
         <button type="button" aria-label="Diminuir" disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}
           className="flex size-12 items-center justify-center rounded-lg border border-border bg-elevated text-primary disabled:opacity-40">
@@ -183,6 +250,13 @@ function VisitFlow() {
   const [result, setResult] = useState<{ affected: number; synced: boolean; urgent: boolean; symptomatic: boolean } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usedVoice, setUsedVoice] = useState(false);
+
+  useEffect(() => {
+    const onVoiceUsed = () => setUsedVoice(true);
+    window.addEventListener("roteacs:voice-used", onVoiceUsed);
+    return () => window.removeEventListener("roteacs:voice-used", onVoiceUsed);
+  }, []);
 
   const section = sections[idx];
   const diarrhea = symptoms.includes("diarrhea");
@@ -205,7 +279,7 @@ function VisitFlow() {
     setIdx(0); setReasons([]); setSymptoms([]); setDuration(1); setDehydration([]); setWater(family.waterSource);
     setLatrine(null); setLatrineCond(null); setHandwash(null); setTrash(null); setVaccines(null); setVaccinesLate("");
     setWeeks(12); setConsults(0); setPBp(null); setPSys(""); setPDia(""); setMeds(null); setCBp(null); setCSys(""); setCDia("");
-    setGluc(null); setGlucVal(""); setResult(null); setError(null);
+    setGluc(null); setGlucVal(""); setResult(null); setError(null); setUsedVoice(false);
   };
 
   const confirm = async () => {
@@ -240,6 +314,7 @@ function VisitFlow() {
           chronic_meds: hasChronic ? meds : null,
           glucose_mgdl: hasChronic && gluc ? toInt(glucVal) : null,
           urgent_referral: urgent,
+          voice_input: usedVoice,
         },
       });
       setResult({ ...r, urgent, symptomatic: diarrhea || fever });
@@ -257,6 +332,11 @@ function VisitFlow() {
           <CheckCircle2 className="size-16 text-risk-low" aria-hidden />
           <h1 className="text-title font-bold text-risk-low">Visita registrada</h1>
           <p className="text-small text-muted-foreground">Dados salvos no dispositivo.</p>
+          {usedVoice && (
+            <p className="flex items-center gap-2 rounded-pill border border-primary/40 bg-primary/10 px-3 py-1.5 text-label font-semibold text-primary">
+              <Mic className="size-3.5 shrink-0" aria-hidden /> Processado por reconhecimento de voz (Small AI)
+            </p>
+          )}
           {!result.synced && (
             <p className="flex items-center gap-2 rounded-lg border border-border bg-elevated p-4 text-small font-semibold text-muted-foreground">
               <CloudOff className="size-4 shrink-0" aria-hidden /> Sem conexão — será enviada quando a internet voltar.
@@ -275,7 +355,8 @@ function VisitFlow() {
             </p>
           )}
           {result.symptomatic && (
-            <Link to="/familias/$id/protocolo" params={{ id: family.id }} search={{ vizinhos: result.affected, pendente: !result.synced }}
+            <Link to="/familias/$id/protocolo" params={{ id: family.id }}
+              search={{ vizinhos: result.affected, pendente: !result.synced, urgente: result.urgent }}
               className="text-body font-semibold text-primary">Ver protocolo de cuidado</Link>
           )}
         </div>
@@ -336,7 +417,16 @@ function VisitFlow() {
 
         {section === "symptoms" && (
           <section key="symptoms" className="flex flex-col gap-4 animate-rise-in">
-            <h1 className="text-subtitle font-bold text-foreground">A família apresenta algum destes sintomas?</h1>
+            <div className="flex items-center justify-between gap-2">
+              <h1 className="text-subtitle font-bold text-foreground">A família apresenta algum destes sintomas?</h1>
+              <VoiceButton onTranscript={(t) => {
+                const found = parseSymptoms(t);
+                if (found.length === 0) return false;
+                if (found.includes("none")) setSymptoms(["none"]);
+                else setSymptoms([...symptoms.filter((s) => s !== "none"), ...found.filter((id) => !symptoms.includes(id))]);
+                return true;
+              }} />
+            </div>
             <div className="flex flex-col gap-2">
               {SYMPTOMS.map(({ id, label, icon: Icon }) => {
                 const on = symptoms.includes(id);
@@ -352,12 +442,20 @@ function VisitFlow() {
               })}
             </div>
             {showDuration && (
-              <Counter label="Há quantos dias?" value={duration} min={1} max={7} onChange={setDuration}
+              <Counter label="Há quantos dias?" value={duration} min={1} max={7} onChange={setDuration} voice
                 format={(v) => (v >= 7 ? "7 ou mais dias" : v === 1 ? "1 dia" : `${v} dias`)} />
             )}
             {showDehydration && (
               <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-                <span className="text-body font-semibold text-foreground">Sinais de desidratação?</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-body font-semibold text-foreground">Sinais de desidratação?</span>
+                  <VoiceButton onTranscript={(t) => {
+                    const found = parseDehydrationSigns(t);
+                    if (found.length === 0) return false;
+                    setDehydration([...dehydration, ...found.filter((d) => !dehydration.includes(d))]);
+                    return true;
+                  }} />
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {DEHYDRATION.map((d) => {
                     const on = dehydration.includes(d);
@@ -378,17 +476,25 @@ function VisitFlow() {
         {section === "wash" && (
           <section key="wash" className="flex flex-col gap-4 animate-rise-in">
             <h1 className="text-subtitle font-bold text-foreground">Condições observadas na visita</h1>
-            <label className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-              <span className="text-body text-foreground">Fonte de água usada esta semana</span>
+            <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-body text-foreground">Fonte de água usada esta semana</span>
+                <VoiceButton onTranscript={(t) => {
+                  const parsed = parseWaterSource(t);
+                  if (!parsed) return false;
+                  setWater(parsed);
+                  return true;
+                }} />
+              </div>
               <select value={water} onChange={(e) => setWater(e.target.value as WaterSource)}
                 className="h-12 rounded-lg border border-border bg-card px-4 text-body text-foreground outline-none focus:border-primary">
                 {SOURCES.map((s) => <option key={s} value={s}>{waterSourceLabels[s]}</option>)}
               </select>
-            </label>
-            <Choice label="Latrina ou banheiro disponível?" options={YES_GOOD} value={latrine} onChange={setLatrine} />
-            <Choice label="Latrina coberta e em boas condições?" options={LATRINE_COND} value={latrineCond} onChange={setLatrineCond} />
-            <Choice label="Ponto de lavagem de mãos com sabão visível?" options={YES_GOOD} value={handwash} onChange={setHandwash} />
-            <Choice label="Lixo a céu aberto próximo à casa?" options={YES_BAD} value={trash} onChange={setTrash} />
+            </div>
+            <Choice label="Latrina ou banheiro disponível?" options={YES_GOOD} value={latrine} onChange={setLatrine} voiceParser={parseYesNo} />
+            <Choice label="Latrina coberta e em boas condições?" options={LATRINE_COND} value={latrineCond} onChange={setLatrineCond} voiceParser={parseLatrineCondition} />
+            <Choice label="Ponto de lavagem de mãos com sabão visível?" options={YES_GOOD} value={handwash} onChange={setHandwash} voiceParser={parseYesNo} />
+            <Choice label="Lixo a céu aberto próximo à casa?" options={YES_BAD} value={trash} onChange={setTrash} voiceParser={parseYesNo} />
           </section>
         )}
 
@@ -398,7 +504,7 @@ function VisitFlow() {
             {hasChildren && (
               <>
                 <Caps>Crianças</Caps>
-                <Choice label="Vacinas em dia?" options={YES_NO_UNKNOWN} value={vaccines} onChange={setVaccines} />
+                <Choice label="Vacinas em dia?" options={YES_NO_UNKNOWN} value={vaccines} onChange={setVaccines} voiceParser={parseYesNoUnknown} />
                 {vaccines === "no" && (
                   <input value={vaccinesLate} onChange={(e) => setVaccinesLate(e.target.value)} placeholder="Quais vacinas estão atrasadas?"
                     className="h-12 rounded-lg border border-border bg-card px-4 text-small text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" />
