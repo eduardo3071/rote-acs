@@ -10,10 +10,13 @@ Ranks families within the ACS's territory by a RiskScore built from 6 explainabl
 and — on dehydration danger signs — an urgent-referral override).
 Detects spatial clusters of GI symptoms offline-capable using Haversine distance
 (200m radius + shared water source) and propagates priority status to neighboring families.
-The 3-step visit flow follows WHO's IMCI (Integrated Management of Childhood Illness) danger
-signs, asks about WASH conditions (latrine, handwashing, water source) and priority groups
-(pregnant women, chronic-disease patients), and lets the ACS answer every question either by
-tapping or by voice (Small AI: closed-vocabulary Portuguese speech recognition).
+The visit flow follows WHO's IMCI (Integrated Management of Childhood Illness) danger signs,
+asks about WASH conditions (latrine, handwashing, water source) and priority groups (pregnant
+women, chronic-disease patients), and lets the ACS answer every question either by tapping or
+by voice — including "Modo Conversa", where the app speaks each question out loud and listens
+for the answer, auto-advancing without a tap in between, with the tap flow always available as
+a fallback. The interface itself is available in Portuguese, English and Spanish, switchable
+any time in Perfil.
 
 ## Why it is unique
 
@@ -35,18 +38,30 @@ where families belong to a real backend, not a local-only device.
 - Haversine cluster detection with a 200-meter radius, run inside the Edge Function
 - `localStorage` offline sync queue (`roteacs_sync_queue`) + store-and-forward to Supabase and to
   the DHIS2 Tracker Events export
-- Small AI layer: closed-vocabulary Portuguese speech recognition (Web Speech API today;
-  isolated behind a single module, `src/lib/voice.ts`, so it can be swapped for a fully
-  on-device model such as Vosk/WASM without touching any screen)
+- Small AI layer: closed-vocabulary Portuguese speech recognition running **on-device** via
+  [Vosk](https://alphacephei.com/vosk/) (WebAssembly, `vosk-model-small-pt-0.3`, ~31MB,
+  downloaded once and cached for offline use), with automatic fallback to the Web Speech API if
+  the model can't load — isolated behind a single module, `src/lib/voice.ts`, so neither engine
+  choice touches any screen
+- Lightweight, dependency-free i18n (`src/lib/i18n.ts`) for the pt-BR/English/Spanish UI —
+  localStorage-backed, same pattern as the offline sync queue, no extra runtime cost
+- Territory is a parameter, not a rebuild: `acs`/`health_facilities`/`families` are keyed by
+  IBGE municipality code (`cod_ibge`), switchable per agent in Perfil — two real municipalities
+  (Anapu-PA and Altamira-PA) are loaded today, see Data Sources below
 
 ## Data Sources
 
+The in-app version of this table — with the same content in Portuguese, English and Spanish —
+lives at `/perfil/dados` ("Fontes de dados e transparência da IA"), so anyone evaluating the app
+can see it without reading the code.
+
 | Dataset | Source | License / year | What it covers | What it does **not** cover |
 |---|---|---|---|---|
-| Rural household coordinates | [IBGE CNEFE 2022](https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/) | Public domain, 2022 | Real lat/lon for 50 households in Anapu, PA (IBGE code 1500859) | Not linked to real residents — family names and clinical history at those coordinates are fictitious, generated for this demo and declared as such |
-| Basic Health Units (UBS) | [CNES/DATASUS](https://cnes.datasus.gov.br) | Public, 2024 | Two real, named UBS in Anapu-PA (ESF Dinora Terezinha, ESF Vila Nova Canaã) | Coordinates are approximated to the municipality centre, not the exact facility address — the CNES geolocation lookup was unreachable from our build network during development |
+| Household coordinates | [IBGE CNEFE 2022](https://ftp.ibge.gov.br/Cadastro_Nacional_de_Enderecos_para_Fins_Estatisticos/) | Public domain, 2022 | Real lat/lon for households in two municipalities: Anapu, PA (IBGE code 1500859, 50 households) and Altamira, PA (IBGE code 1500602, 40 households) | Not linked to real residents — family names and clinical history at those coordinates are fictitious, generated for this demo and declared as such |
+| Basic Health Units (UBS) | [CNES/DATASUS](https://cnes.datasus.gov.br) | Public, 2024 | Real, named UBS in both loaded territories (Anapu: ESF Dinora Terezinha, ESF Vila Nova Canaã; Altamira: USF Brasília, USF Boa Esperança), with real CNES codes | Anapu's coordinates are approximated to the municipality centre, not the exact facility address — the CNES geolocation lookup was unreachable from our build network during development |
+| Interoperability (export) | [DHIS2](https://dhis2.org) — named in the hackathon's own Annex A as "the system your record most plausibly lands in" | Open-source (BSD-3) | Exports synced visits in a DHIS2-compatible event format — the health information system used by ministries of health in 70+ countries, including Brazil's SUS | This demo generates the compatible JSON for the agent to copy/download; it does not push to a live DHIS2 instance |
 | Clinical danger signs | [WHO IMCI](https://www.who.int/publications/i/item/9789241508738) (Integrated Management of Childhood Illness) | Public domain | The 3 dehydration danger signs (sunken eyes, dry mouth, unusual lethargy) and the respiratory-distress question asked in the visit flow, and the +25-point urgent-referral override in the RiskScore | Not a diagnostic model — IMCI is used only to decide which yes/no questions the ACS is asked; the app never outputs a diagnosis, only a referral prompt for a human to act on |
-| Portuguese speech recognition | Web Speech API (browser-native; Chrome's cloud recognition service on Android) | Vendor service, not an open dataset | Short, closed-vocabulary utterances (sim/não, water-source names, numbers 0–10, known symptom keywords) in pt-BR | **Not fully on-device/offline** — needs network for the recognition step itself (the rest of the app's offline behaviour is unaffected); accuracy across Brazilian regional accents has not been benchmarked; cannot transcribe free-form long sentences — by design, not a bug, since the vocabulary is intentionally closed |
+| Portuguese speech recognition | [Vosk](https://alphacephei.com/vosk/) (`vosk-model-small-pt-0.3`), running on-device via WebAssembly | Apache 2.0 | Short, closed-vocabulary utterances (sim/não, water-source names, numbers 0–10, known symptom keywords, visit reason) in pt-BR, including the "Modo Conversa" flow — recognized entirely on the phone, cached after the first download so it works with no connection from then on | Accuracy across Brazilian regional accents hasn't been field-tested yet; falls back to the cloud-based Web Speech API if the on-device model fails to load (e.g. no network on first use) — that fallback path does need connectivity, unlike the Vosk path |
 | Family identities & visit history | Synthetic, generated for this demo | — | Realistic Pará surnames, plausible symptom/visit patterns for the demo narrative | Does **not** represent real patients or real clinical events of any kind |
 
 ## What the model does NOT detect
@@ -68,6 +83,9 @@ where families belong to a real backend, not a local-only device.
 - Family data is scoped per agent via Postgres Row Level Security; a lost phone only exposes that
   agent's own already-synced cache, held in unencrypted `localStorage` — a known limitation, not
   hidden
+- With the Vosk engine, voice audio is processed on-device and discarded immediately — nothing is
+  recorded or sent to a server; only the Web Speech fallback path (used if Vosk can't load) sends
+  audio to the browser vendor's cloud for transcription
 - The system never acts autonomously: no visit, referral, or sync happens without the ACS's action
 
 ## Demo credentials
