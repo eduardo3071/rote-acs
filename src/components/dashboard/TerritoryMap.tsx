@@ -1,57 +1,188 @@
-import { TERRITORY_CENTER, TERRITORY_RADIUS_M, type Family } from "@/data/families";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import type { Family } from "@/data/families";
 import { riskLevel, type RiskLevel } from "@/lib/risk";
+import { getGoogleMapsKey } from "@/lib/maps.functions";
 
-const fill: Record<RiskLevel, string> = {
-  high: "fill-risk-high",
-  medium: "fill-risk-medium",
-  low: "fill-risk-low",
+const COLORS: Record<RiskLevel, string> = {
+  low: "#19D98B",
+  medium: "#FFC83D",
+  high: "#FF5263",
 };
 
-const M_PER_DEG = 111_320;
-const cosLat = Math.cos((TERRITORY_CENTER.latitude * Math.PI) / 180);
+/** Estilo escuro alinhado ao Design System (fundo #0A0F1E, água #111827, vias #1C2537, rótulos #7B92B2). */
+const DARK_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#0A0F1E" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#7B92B2" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0A0F1E" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#111827" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#1C2537" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#1E2D45" }] },
+  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#111827" }] },
+  { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#1E2D45" }] },
+  { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#0A0F1E" }] },
+];
 
-/** Project fictional coordinates into a 0–100 box centred on the territory. */
-function project(f: Family) {
-  const north = (f.latitude - TERRITORY_CENTER.latitude) * M_PER_DEG;
-  const east = (f.longitude - TERRITORY_CENTER.longitude) * M_PER_DEG * cosLat;
-  const r = TERRITORY_RADIUS_M * 1.05;
-  return { x: 50 + (east / r) * 48, y: 50 - (north / r) * 48 };
+/** Anapu-PA — centro padrão quando não há famílias. */
+const FALLBACK_CENTER = { lat: -3.4892, lng: -51.1831 };
+
+function markerIcon(level: RiskLevel): google.maps.Symbol {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    fillColor: COLORS[level],
+    fillOpacity: 1,
+    scale: 7,
+    strokeColor: "#0A0F1E",
+    strokeWeight: 2,
+  };
 }
 
-/** Compact dot map of the demo territory (fictional coordinates). */
+/** Google Maps real do território: marcadores por risco, cluster pulsante e InfoWindow. */
 export function TerritoryMap({ families, focusId }: { families: Family[]; focusId?: string | undefined }) {
-  const pts = families.map((f) => ({ f, ...project(f), level: riskLevel(f.riskScore) }));
-  const cluster = pts.filter((p) => p.f.clusterRisk);
-  const cx = cluster.reduce((s, p) => s + p.x, 0) / (cluster.length || 1);
-  const cy = cluster.reduce((s, p) => s + p.y, 0) / (cluster.length || 1);
-  const focus = pts.find((p) => p.f.id === focusId);
-  const ordered = [...pts].sort((a, b) => a.f.riskScore - b.f.riskScore);
+  const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Carrega a Maps JS API uma vez e cria o mapa.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const key = await getGoogleMapsKey();
+        if (cancelled) return;
+        setOptions({ key });
+        await importLibrary("maps");
+        if (cancelled || !containerRef.current) return;
+        const center =
+          families.length > 0
+            ? {
+                lat: families.reduce((s, f) => s + f.latitude, 0) / families.length,
+                lng: families.reduce((s, f) => s + f.longitude, 0) / families.length,
+              }
+            : FALLBACK_CENTER;
+        const m = new google.maps.Map(containerRef.current, {
+          center,
+          zoom: 14,
+          styles: DARK_STYLE,
+          disableDefaultUI: true,
+          zoomControl: true,
+          clickableIcons: false,
+          gestureHandling: "greedy",
+        });
+        setMap(m);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Não foi possível carregar o mapa.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Marcadores e círculos derivados do estado das famílias — atualizam sem recarregar o mapa.
+  useEffect(() => {
+    if (!map) return;
+    const markers: google.maps.Marker[] = [];
+    const circles: google.maps.Circle[] = [];
+    const timers: number[] = [];
+    const info = new google.maps.InfoWindow();
+
+    for (const f of families) {
+      const level = riskLevel(f.riskScore);
+      const marker = new google.maps.Marker({
+        map,
+        position: { lat: f.latitude, lng: f.longitude },
+        icon: markerIcon(level),
+        title: f.name,
+      });
+      marker.addListener("click", () => {
+        info.setContent(`
+          <div style="background:#111827;border:1px solid #1E2D45;border-radius:12px;padding:12px 14px;min-width:180px;font-family:Inter,sans-serif">
+            <p style="margin:0;font-size:15px;font-weight:700;color:#F0F4FF">${f.name}</p>
+            <p style="margin:4px 0 0;font-size:13px;font-weight:700;color:${COLORS[level]}">Risco ${f.riskScore}</p>
+            <p style="margin:4px 0 10px;font-size:13px;color:#7B92B2">${f.riskReason}</p>
+            <button id="roteacs-infowin-btn" style="width:100%;height:36px;border:0;border-radius:8px;background:#16A8FF;color:#0A0F1E;font-size:13px;font-weight:700;cursor:pointer">Ver detalhes</button>
+          </div>`);
+        info.open({ map, anchor: marker });
+        google.maps.event.addListenerOnce(info, "domready", () => {
+          document.getElementById("roteacs-infowin-btn")?.addEventListener("click", () => {
+            info.close();
+            void navigate({ to: "/familias/$id", params: { id: f.id } });
+          });
+        });
+      });
+      markers.push(marker);
+
+      if (f.clusterRisk) {
+        const circle = new google.maps.Circle({
+          map,
+          center: { lat: f.latitude, lng: f.longitude },
+          radius: 200,
+          fillColor: "#FF5263",
+          fillOpacity: 0.1,
+          strokeColor: "#FF5263",
+          strokeOpacity: 0.9,
+          strokeWeight: 1,
+        });
+        circles.push(circle);
+        // Anel pulsante: raio 200 → 280 → 200 em loop de 1,5 s.
+        let growing = true;
+        timers.push(
+          window.setInterval(() => {
+            growing = !growing;
+            circle.setRadius(growing ? 280 : 200);
+          }, 750),
+        );
+      }
+    }
+
+    if (focusId) {
+      const focus = families.find((f) => f.id === focusId);
+      if (focus) map.panTo({ lat: focus.latitude, lng: focus.longitude });
+    }
+
+    return () => {
+      timers.forEach((t) => window.clearInterval(t));
+      markers.forEach((m) => m.setMap(null));
+      circles.forEach((c) => c.setMap(null));
+      info.close();
+    };
+  }, [map, families, focusId, navigate]);
 
   return (
-    <svg viewBox="0 0 100 100" className="aspect-square w-full" role="img"
-      aria-label="Mapa ilustrativo do território com as famílias coloridas por prioridade">
-      {[16, 32, 48].map((r) => (
-        <circle key={r} cx={50} cy={50} r={r} className="fill-none stroke-border" strokeWidth={0.4} strokeDasharray="1 1.5" />
-      ))}
-      <line x1={50} y1={2} x2={50} y2={98} className="stroke-border" strokeWidth={0.3} />
-      <line x1={2} y1={50} x2={98} y2={50} className="stroke-border" strokeWidth={0.3} />
-      {cluster.length > 1 && (
-        <circle cx={cx} cy={cy} r={7} className="fill-risk-high/10 stroke-risk-high" strokeWidth={0.5} strokeDasharray="1.2 1">
-          <animate attributeName="r" values="6;8;6" dur="3s" repeatCount="indefinite" />
-        </circle>
+    <div className="relative overflow-hidden rounded-lg border border-border">
+      <div
+        ref={containerRef}
+        className="h-64 w-full bg-background"
+        role="img"
+        aria-label="Mapa do território com as famílias coloridas por prioridade"
+      />
+      {!map && !error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background">
+          <p className="text-small text-muted-foreground">Carregando mapa…</p>
+        </div>
       )}
-      {ordered.map((p) => (
-        <circle key={p.f.id} cx={p.x} cy={p.y} r={p.level === "high" ? 1.8 : 1.4} className={fill[p.level]}
-          opacity={p.level === "low" ? 0.7 : 1}>
-          <title>{p.f.name}</title>
-        </circle>
-      ))}
-      {focus && (
-        <g>
-          <circle cx={focus.x} cy={focus.y} r={3.4} className="fill-none stroke-risk-high" strokeWidth={0.6} />
-          <circle cx={focus.x} cy={focus.y} r={2.2} className="fill-risk-high" />
-        </g>
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background px-6 text-center">
+          <p className="text-small text-risk-high">{error}</p>
+        </div>
       )}
-    </svg>
+      <div className="absolute left-2 top-2 rounded-lg bg-card/90 p-2">
+        <p className="flex items-center gap-1.5 text-label text-muted-foreground">
+          <span className="size-2 rounded-pill bg-risk-low" /> Monitoramento
+        </p>
+        <p className="mt-1 flex items-center gap-1.5 text-label text-muted-foreground">
+          <span className="size-2 rounded-pill bg-risk-medium" /> Atenção
+        </p>
+        <p className="mt-1 flex items-center gap-1.5 text-label text-muted-foreground">
+          <span className="size-2 animate-pulse rounded-pill bg-risk-high" /> Cluster ativo
+        </p>
+      </div>
+    </div>
   );
 }
