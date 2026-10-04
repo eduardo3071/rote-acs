@@ -7,6 +7,7 @@ import {
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { getFamilyById, waterSourceLabels, type WaterSource } from "@/data/families";
 import { confirmVisit, useFamily } from "@/lib/territory";
+import { loadRemoteFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { cn } from "@/lib/utils";
 import {
@@ -15,8 +16,9 @@ import {
 } from "@/lib/voice";
 
 export const Route = createFileRoute("/familias/$id/visita")({
-  loader: ({ params }) => {
-    const family = getFamilyById(params.id);
+  ssr: false,
+  loader: async ({ params }) => {
+    const family = getFamilyById(params.id) ?? (await loadRemoteFamily(params.id));
     if (!family) throw notFound();
     return { family };
   },
