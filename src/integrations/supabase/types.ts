@@ -98,6 +98,7 @@ export type Database = {
           acs_id: string | null
           children_under5: number | null
           cluster_risk: boolean | null
+          cod_ibge: string | null
           created_at: string | null
           has_chronic: boolean
           has_pregnant: boolean
@@ -105,6 +106,7 @@ export type Database = {
           last_visit_at: string | null
           lat: number
           lon: number
+          municipio: string | null
           name: string
           risk_reason: string | null
           risk_score: number | null
@@ -116,6 +118,7 @@ export type Database = {
           acs_id?: string | null
           children_under5?: number | null
           cluster_risk?: boolean | null
+          cod_ibge?: string | null
           created_at?: string | null
           has_chronic?: boolean
           has_pregnant?: boolean
@@ -123,6 +126,7 @@ export type Database = {
           last_visit_at?: string | null
           lat: number
           lon: number
+          municipio?: string | null
           name: string
           risk_reason?: string | null
           risk_score?: number | null
@@ -134,6 +138,7 @@ export type Database = {
           acs_id?: string | null
           children_under5?: number | null
           cluster_risk?: boolean | null
+          cod_ibge?: string | null
           created_at?: string | null
           has_chronic?: boolean
           has_pregnant?: boolean
@@ -141,6 +146,7 @@ export type Database = {
           last_visit_at?: string | null
           lat?: number
           lon?: number
+          municipio?: string | null
           name?: string
           risk_reason?: string | null
           risk_score?: number | null
