@@ -102,11 +102,10 @@ export function getFamiliesCacheMeta(): { count: number; cachedAt: string | null
 async function loadRemoteFamilies(): Promise<Family[]> {
   const session = await getSession();
   if (!session) return mockFamilies;
-  const { data, error } = await supabase
-    .from("families")
-    .select("*")
-    .eq("acs_id", session.acsId)
-    .order("risk_score", { ascending: false });
+  let query = supabase.from("families").select("*").eq("acs_id", session.acsId);
+  // Territory = the agent's current IBGE municipality code; switching it in Perfil swaps the families.
+  if (session.codIbge) query = query.eq("cod_ibge" as never, session.codIbge as never);
+  const { data, error } = await query.order("risk_score", { ascending: false });
   if (error || !data) {
     const cache = readFamiliesCache();
     return cache?.families ?? mockFamilies;

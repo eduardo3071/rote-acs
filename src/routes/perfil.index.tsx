@@ -25,7 +25,7 @@ const UF_NAMES: Record<string, string> = {
  *  demo just hasn't loaded them (see the "Território" dialog copy below). */
 const PA_MUNICIPALITIES: { name: string; codIbge: string | null; loaded: boolean }[] = [
   { name: "Anapu", codIbge: "1500859", loaded: true },
-  { name: "Altamira", codIbge: null, loaded: false },
+  { name: "Altamira", codIbge: "1500602", loaded: true },
   { name: "Senador José Porfírio", codIbge: null, loaded: false },
   { name: "Vitória do Xingu", codIbge: null, loaded: false },
   { name: "Pacajá", codIbge: null, loaded: false },
