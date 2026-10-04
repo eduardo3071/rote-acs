@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as MapaTesteRouteImport } from './routes/mapa-teste'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PerfilRouteImport } from './routes/perfil'
 import { Route as FamiliasIndexRouteImport } from './routes/familias.index'
@@ -39,11 +38,6 @@ const DesignSystemRoute = DesignSystemRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MapaTesteRoute = MapaTesteRouteImport.update({
-  id: '/mapa-teste',
-  path: '/mapa-teste',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -82,7 +76,6 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
-  '/mapa-teste': typeof MapaTesteRoute
   '/onboarding': typeof OnboardingRoute
   '/perfil': typeof PerfilRoute
   '/familias/': typeof FamiliasIndexRoute
@@ -95,7 +88,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
-  '/mapa-teste': typeof MapaTesteRoute
   '/onboarding': typeof OnboardingRoute
   '/perfil': typeof PerfilRoute
   '/familias': typeof FamiliasIndexRoute
@@ -109,7 +101,6 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
-  '/mapa-teste': typeof MapaTesteRoute
   '/onboarding': typeof OnboardingRoute
   '/perfil': typeof PerfilRoute
   '/familias/': typeof FamiliasIndexRoute
@@ -124,7 +115,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/design-system'
     | '/login'
-    | '/mapa-teste'
     | '/onboarding'
     | '/perfil'
     | '/familias/'
@@ -137,7 +127,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/design-system'
     | '/login'
-    | '/mapa-teste'
     | '/onboarding'
     | '/perfil'
     | '/familias'
@@ -150,7 +139,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/design-system'
     | '/login'
-    | '/mapa-teste'
     | '/onboarding'
     | '/perfil'
     | '/familias/'
@@ -164,7 +152,6 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
-  MapaTesteRoute: typeof MapaTesteRoute
   OnboardingRoute: typeof OnboardingRoute
   PerfilRoute: typeof PerfilRoute
   FamiliasIndexRoute: typeof FamiliasIndexRoute
@@ -201,13 +188,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mapa-teste': {
-      id: '/mapa-teste'
-      path: '/mapa-teste'
-      fullPath: '/mapa-teste'
-      preLoaderRoute: typeof MapaTesteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -260,7 +240,6 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
-  MapaTesteRoute: MapaTesteRoute,
   OnboardingRoute: OnboardingRoute,
   PerfilRoute: PerfilRoute,
   FamiliasIndexRoute: FamiliasIndexRoute,
