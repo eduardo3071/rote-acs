@@ -275,7 +275,7 @@ function VisitFlow() {
           return parsed;
         }
       } catch { /* no speech detected — fall through to retry/give-up below */ }
-      if (i === 0) await speak(m.visit.misunderstood.replace('"{text}". Toque de novo ou selecione manualmente.', '').replace('"{text}". Tap again or select manually.', '').replace('"{text}". Toca otra vez o selecciona manualmente.', ''));
+      if (i === 0) await speak(m.visit.retryVoice);
     }
     return null;
   };
@@ -291,23 +291,23 @@ function VisitFlow() {
     setConversationMode("running");
     setIdx(0);
 
-    setConversationStatus("Ouvindo o motivo da visita…");
+    setConversationStatus(m.visit.listeningReason);
     const reason = await voiceAsk("Qual o motivo da visita? Diga rotina, sintoma, gestante ou crônica.", parseReason);
     if (reason === null) {
-      setConversationStatus("Não entendi o motivo. Toque para responder manualmente.");
+      setConversationStatus(m.visit.reasonManual);
       setConversationMode("idle");
       return;
     }
     setReasons([reason]);
     setIdx(1);
 
-    setConversationStatus("Ouvindo os sintomas…");
+    setConversationStatus(m.visit.listeningSymptoms);
     const symptomsFound = await voiceAsk(
       "A família apresenta diarreia, febre, tosse, vômito, ou nenhum sintoma?",
       (t) => { const found = parseSymptoms(t); return found.length > 0 ? found : null; },
     );
     if (symptomsFound === null) {
-      setConversationStatus("Não entendi os sintomas. Complete esta etapa manualmente.");
+      setConversationStatus(m.visit.symptomsManual);
       setConversationMode("idle");
       return;
     }
@@ -326,7 +326,7 @@ function VisitFlow() {
     }
 
     setIdx(2);
-    setConversationStatus("Ouvindo as condições de água e saneamento…");
+    setConversationStatus(m.visit.listeningWash);
 
     const waterSrc = await voiceAsk("Qual a fonte de água usada esta semana? Poço, rio, igarapé, torneira ou outra?", parseWaterSource);
     if (waterSrc !== null) setWater(waterSrc);
@@ -344,7 +344,7 @@ function VisitFlow() {
     if (trashOk !== null) setTrash(trashOk);
 
     await speak("Entrevista por voz concluída. Complete o restante das perguntas tocando na tela.");
-    setConversationStatus("Entrevista por voz concluída. Complete o restante manualmente.");
+    setConversationStatus(m.visit.voiceComplete);
     setConversationMode("done");
     setIdx(3);
   };
