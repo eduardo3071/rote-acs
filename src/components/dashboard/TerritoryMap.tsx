@@ -6,6 +6,7 @@ import type { Family } from "@/data/families";
 import { riskLevel, type RiskLevel } from "@/lib/risk";
 import { getGoogleMapsKey } from "@/lib/maps.functions";
 import { fill, useAppTranslations } from "@/lib/app-translations";
+import { localizedReason } from "@/lib/localized-family";
 
 const COLORS: Record<RiskLevel, string> = {
   low: "#19D98B",
@@ -118,7 +119,7 @@ export function TerritoryMap({ families, focusId }: { families: Family[]; focusI
           <div style="background:#111827;border:1px solid #1E2D45;border-radius:12px;padding:12px 14px;min-width:180px;font-family:Inter,sans-serif">
             <p style="margin:0;font-size:15px;font-weight:700;color:#F0F4FF">${f.name}</p>
             <p style="margin:4px 0 0;font-size:13px;font-weight:700;color:${COLORS[level]}">${fill(m.map.risk, { score: f.riskScore })}</p>
-            <p style="margin:4px 0 10px;font-size:13px;color:#7B92B2">${f.riskReason}</p>
+            <p style="margin:4px 0 10px;font-size:13px;color:#7B92B2">${localizedReason(f, m)}</p>
             <button id="roteacs-infowin-btn" style="width:100%;height:36px;border:0;border-radius:8px;background:#16A8FF;color:#0A0F1E;font-size:13px;font-weight:700;cursor:pointer">${m.map.details}</button>
           </div>`);
         info.open({ map, anchor: marker });

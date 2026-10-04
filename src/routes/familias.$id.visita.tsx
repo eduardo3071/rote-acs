@@ -32,13 +32,18 @@ export const Route = createFileRoute("/familias/$id/visita")({
       { property: "og:description", content: d }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] };
   },
   notFoundComponent: () => (
-    <div className="field-surface flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-subtitle font-bold text-foreground">Família não encontrada</p>
-      <Link to="/familias" className="text-body text-primary">Voltar para a lista</Link>
-    </div>
+    <VisitNotFound />
   ),
   component: VisitFlow,
 });
+
+function VisitNotFound() {
+  const { m } = useAppTranslations();
+  return <div className="field-surface flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+    <p className="text-subtitle font-bold text-foreground">{m.common.notFound}</p>
+    <Link to="/familias" className="text-body text-primary">{m.common.backToList}</Link>
+  </div>;
+}
 
 type SectionId = "reason" | "symptoms" | "wash" | "groups" | "chronic" | "confirm";
 type Tone = "good" | "bad" | "neutral";

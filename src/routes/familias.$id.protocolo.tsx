@@ -27,13 +27,18 @@ export const Route = createFileRoute("/familias/$id/protocolo")({
       { property: "og:description", content: d }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] };
   },
   notFoundComponent: () => (
-    <div className="field-surface flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-subtitle font-bold text-foreground">Família não encontrada</p>
-      <Link to="/familias" className="text-body text-primary">Voltar para a lista</Link>
-    </div>
+    <ProtocolNotFound />
   ),
   component: ProtocolPage,
 });
+
+function ProtocolNotFound() {
+  const { m } = useAppTranslations();
+  return <div className="field-surface flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+    <p className="text-subtitle font-bold text-foreground">{m.common.notFound}</p>
+    <Link to="/familias" className="text-body text-primary">{m.common.backToList}</Link>
+  </div>;
+}
 
 /** Shown when the visit flagged IMCI dehydration danger signs — encaminhamento urgente. */
 export function ReferralCard({ text }: { text?: string }) {
