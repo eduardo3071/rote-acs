@@ -85,7 +85,28 @@ export function listenOnce(lang = "pt-BR"): Promise<string> {
   });
 }
 
+/** Speaks a prompt out loud (pt-BR) using the browser's built-in speech synthesis — the
+ *  other half of "Modo Conversa": the app asks, the ACS answers, no typing/tapping in between. */
+export function speak(text: string, lang = "pt-BR"): Promise<void> {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
 // ---------- parsers: closed-vocabulary speech → structured field ----------
+
+export function parseReason(transcript: string): "routine" | "symptom" | "prenatal" | "chronic" | null {
+  if (/gestante|pr[eé]-?natal|grávida/.test(transcript)) return "prenatal";
+  if (/cr[oô]nic/.test(transcript)) return "chronic";
+  if (/sintoma/.test(transcript)) return "symptom";
+  if (/rotina/.test(transcript)) return "routine";
+  return null;
+}
 
 export function parseYesNo(transcript: string): boolean | null {
   if (/\bn[aã]o\b/.test(transcript)) return false;

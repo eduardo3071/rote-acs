@@ -11,7 +11,7 @@ import { useAgentSession } from "@/lib/useAgentSession";
 import { cn } from "@/lib/utils";
 import {
   isVoiceSupported, listenOnce, parseDehydrationSigns, parseLatrineCondition, parseNumber,
-  parseSymptoms, parseWaterSource, parseYesNo, parseYesNoUnknown,
+  parseReason, parseSymptoms, parseWaterSource, parseYesNo, parseYesNoUnknown, speak,
 } from "@/lib/voice";
 
 export const Route = createFileRoute("/familias/$id/visita")({
@@ -251,12 +251,104 @@ function VisitFlow() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usedVoice, setUsedVoice] = useState(false);
+  const [conversationMode, setConversationMode] = useState<"idle" | "running" | "done">("idle");
+  const [conversationStatus, setConversationStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const onVoiceUsed = () => setUsedVoice(true);
     window.addEventListener("roteacs:voice-used", onVoiceUsed);
     return () => window.removeEventListener("roteacs:voice-used", onVoiceUsed);
   }, []);
+
+  /**
+   * Asks a question out loud, listens once, and retries once more on a failed/unrecognized
+   * answer before giving up — the building block of "Modo Conversa" (speak → listen → parse,
+   * with the same closed-vocabulary parsers the tap-fallback voice buttons already use).
+   */
+  const voiceAsk = async <T,>(prompt: string, attempt: (transcript: string) => T | null): Promise<T | null> => {
+    await speak(prompt);
+    for (let i = 0; i < 2; i++) {
+      try {
+        const transcript = await listenOnce();
+        const parsed = attempt(transcript);
+        if (parsed !== null) {
+          window.dispatchEvent(new Event("roteacs:voice-used"));
+          return parsed;
+        }
+      } catch { /* no speech detected — fall through to retry/give-up below */ }
+      if (i === 0) await speak("Não entendi. Pode repetir?");
+    }
+    return null;
+  };
+
+  /**
+   * "Modo Conversa": the app asks each question out loud and auto-advances on the answer
+   * instead of waiting for a tap, covering motivo → sintomas → saneamento (the questions
+   * voice fits well). It stops and hands control back to the tap flow the moment a question
+   * isn't understood twice, or once it reaches grupos/crônicas/confirmação — sections kept
+   * tap-only since they involve numbers and medical readings a misheard word could corrupt.
+   */
+  const runConversation = async () => {
+    setConversationMode("running");
+    setIdx(0);
+
+    setConversationStatus("Ouvindo o motivo da visita…");
+    const reason = await voiceAsk("Qual o motivo da visita? Diga rotina, sintoma, gestante ou crônica.", parseReason);
+    if (reason === null) {
+      setConversationStatus("Não entendi o motivo. Toque para responder manualmente.");
+      setConversationMode("idle");
+      return;
+    }
+    setReasons([reason]);
+    setIdx(1);
+
+    setConversationStatus("Ouvindo os sintomas…");
+    const symptomsFound = await voiceAsk(
+      "A família apresenta diarreia, febre, tosse, vômito, ou nenhum sintoma?",
+      (t) => { const found = parseSymptoms(t); return found.length > 0 ? found : null; },
+    );
+    if (symptomsFound === null) {
+      setConversationStatus("Não entendi os sintomas. Complete esta etapa manualmente.");
+      setConversationMode("idle");
+      return;
+    }
+    setSymptoms(symptomsFound);
+
+    if (symptomsFound.includes("diarrhea") || symptomsFound.includes("fever")) {
+      const days = await voiceAsk("Há quantos dias? Diga um número de um a sete.", (t) => parseNumber(t, 7));
+      if (days !== null) setDuration(days);
+    }
+    if (symptomsFound.includes("diarrhea") && hasChildren) {
+      const signs = await voiceAsk(
+        "A criança está com olhos fundos, boca seca ou letárgica? Pode dizer mais de um, ou diga nenhum.",
+        (t) => parseDehydrationSigns(t),
+      );
+      if (signs !== null) setDehydration(signs);
+    }
+
+    setIdx(2);
+    setConversationStatus("Ouvindo as condições de água e saneamento…");
+
+    const waterSrc = await voiceAsk("Qual a fonte de água usada esta semana? Poço, rio, igarapé, torneira ou outra?", parseWaterSource);
+    if (waterSrc !== null) setWater(waterSrc);
+
+    const latrineOk = await voiceAsk("A casa tem latrina ou banheiro disponível? Sim ou não.", parseYesNo);
+    if (latrineOk !== null) setLatrine(latrineOk);
+
+    const latrineCondVal = await voiceAsk("A latrina está coberta e em boas condições? Sim, não, ou não se aplica.", parseLatrineCondition);
+    if (latrineCondVal !== null) setLatrineCond(latrineCondVal);
+
+    const handwashOk = await voiceAsk("Tem ponto de lavagem de mãos com sabão visível? Sim ou não.", parseYesNo);
+    if (handwashOk !== null) setHandwash(handwashOk);
+
+    const trashOk = await voiceAsk("Tem lixo a céu aberto perto da casa? Sim ou não.", parseYesNo);
+    if (trashOk !== null) setTrash(trashOk);
+
+    await speak("Entrevista por voz concluída. Complete o restante das perguntas tocando na tela.");
+    setConversationStatus("Entrevista por voz concluída. Complete o restante manualmente.");
+    setConversationMode("done");
+    setIdx(3);
+  };
 
   const section = sections[idx];
   const diarrhea = symptoms.includes("diarrhea");
@@ -280,6 +372,7 @@ function VisitFlow() {
     setLatrine(null); setLatrineCond(null); setHandwash(null); setTrash(null); setVaccines(null); setVaccinesLate("");
     setWeeks(12); setConsults(0); setPBp(null); setPSys(""); setPDia(""); setMeds(null); setCBp(null); setCSys(""); setCDia("");
     setGluc(null); setGlucVal(""); setResult(null); setError(null); setUsedVoice(false);
+    setConversationMode("idle"); setConversationStatus(null);
   };
 
   const confirm = async () => {
@@ -392,16 +485,31 @@ function VisitFlow() {
       <div className="mx-auto flex max-w-md flex-col gap-6 px-6 pb-32 pt-6">
         <div className="flex items-center justify-between">
           <button onClick={() => (idx > 0 ? setIdx(idx - 1) : navigate({ to: "/familias/$id", params: { id: family.id } }))}
-            className="flex items-center gap-2 text-body text-primary">
+            disabled={conversationMode === "running"}
+            className="flex items-center gap-2 text-body text-primary disabled:opacity-40">
             <ArrowLeft className="size-5" aria-hidden /> {idx > 0 ? "Voltar" : family.name}
           </button>
           <span className="label-caps text-muted-foreground">Etapa {idx + 1}/{sections.length}</span>
         </div>
         <Stepper total={sections.length} current={idx} />
 
+        {conversationStatus && (
+          <p role="status" className={cn("flex items-center gap-2 rounded-lg border p-3 text-small font-semibold",
+            conversationMode === "running" ? "border-primary bg-primary/10 text-primary" : "border-border bg-elevated text-muted-foreground")}>
+            <Mic className={cn("size-4 shrink-0", conversationMode === "running" && "animate-pulse")} aria-hidden />
+            {conversationStatus}
+          </p>
+        )}
+
         {section === "reason" && (
           <section key="reason" className="flex flex-col gap-4 animate-rise-in">
             <h1 className="text-center text-subtitle font-bold text-foreground">Qual o motivo da visita?</h1>
+            {isVoiceSupported() && conversationMode !== "running" && (
+              <button type="button" onClick={runConversation}
+                className="flex h-14 items-center justify-center gap-2 rounded-lg border-2 border-primary bg-primary/10 text-body font-bold text-primary">
+                <Mic className="size-5" aria-hidden /> Iniciar entrevista por voz
+              </button>
+            )}
             <div className="grid grid-cols-2 gap-2">
               {REASONS.map(({ id, label, icon: Icon }) => (
                 <button key={id} type="button" aria-pressed={reasons.includes(id)} onClick={() => toggle(reasons, setReasons, id)}
@@ -574,7 +682,7 @@ function VisitFlow() {
               {submitting ? <><Loader2 className="!size-5 animate-spin" aria-hidden /> Salvando…</> : "Confirmar visita"}
             </PrimaryButton>
           ) : (
-            <PrimaryButton onClick={() => setIdx(idx + 1)} disabled={!canNext}>Próximo</PrimaryButton>
+            <PrimaryButton onClick={() => setIdx(idx + 1)} disabled={!canNext || conversationMode === "running"}>Próximo</PrimaryButton>
           )}
         </div>
       </div>
