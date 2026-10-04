@@ -11,8 +11,8 @@ const NEXT_LABEL: Record<Locale, string> = {
 
 /** Fixed language switch on the right edge, visible on every screen. Cycles pt-BR → en → es → pt-BR. */
 export function LanguageToggle() {
-  const locale = useLocale();
-  const next = ORDER[(ORDER.indexOf(locale) + 1) % ORDER.length];
+  const locale = useLocale() ?? "pt-BR";
+  const next = ORDER[(ORDER.indexOf(locale) + 1) % ORDER.length]!;
   return (
     <button
       type="button"
