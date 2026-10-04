@@ -1,17 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Flame, Eye, CheckCircle2, CalendarClock, ListOrdered, Map as MapIcon } from "lucide-react";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { TerritoryRiskChart } from "@/components/dashboard/TerritoryRiskChart";
 import { TerritoryMap } from "@/components/dashboard/TerritoryMap";
 import { PriorityFamilyCard } from "@/components/dashboard/PriorityFamilyCard";
+import { NearestFacilityCard } from "@/components/dashboard/NearestFacilityCard";
 import { DashboardMetricCard } from "@/components/dashboard/DashboardMetricCard";
 import { logout } from "@/lib/session";
 import { BottomNav } from "@/components/BottomNav";
 import { useAgentSession } from "@/lib/useAgentSession";
 import { daysSinceVisit } from "@/data/families";
-import { useFamilies } from "@/lib/territory";
+import { getNearestHealthFacility, useFamilies, type NearestFacility } from "@/lib/territory";
 import { countByLevel, priorityLabels, type RiskLevel } from "@/lib/risk";
 
 export const Route = createFileRoute("/dashboard")({
@@ -35,11 +36,23 @@ function Dashboard() {
   const session = useAgentSession();
   const [syncedAt] = useState(() => new Date());
   const mockFamilies = useFamilies();
-
-  if (!session) return <div className="field-surface min-h-screen" />;
+  const [facility, setFacility] = useState<NearestFacility | null>(null);
 
   const counts = countByLevel(mockFamilies);
   const top = [...mockFamilies].sort((a, b) => b.riskScore - a.riskScore)[0];
+
+  useEffect(() => {
+    if (!top) return;
+    let active = true;
+    getNearestHealthFacility(top.latitude, top.longitude).then((f) => {
+      if (active) setFacility(f);
+    });
+    return () => {
+      active = false;
+    };
+  }, [top?.id]);
+
+  if (!session) return <div className="field-surface min-h-screen" />;
   const visitedToday = mockFamilies.filter((f) => daysSinceVisit(f) === 0).length;
   const overdue = mockFamilies.filter((f) => daysSinceVisit(f) >= 30).length;
 
@@ -71,10 +84,12 @@ function Dashboard() {
             <p className="mt-2 text-small text-muted-foreground">
               Círculo vermelho: famílias próximas com a mesma fonte de água.
             </p>
+            <p className="mt-1 text-label text-ink-faint">Coordenadas reais · IBGE CNEFE 2022</p>
           </section>
         </div>
 
         {top && <PriorityFamilyCard family={top} />}
+        {facility && <NearestFacilityCard facility={facility} />}
 
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <DashboardMetricCard icon={Flame} tone="high" value={counts.high} label="Alta prioridade" />

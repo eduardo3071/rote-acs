@@ -249,6 +249,32 @@ export function distanceMeters(a: Pick<Family, "latitude" | "longitude">, b: Pic
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+export interface NearestFacility {
+  name: string;
+  type: string;
+  distanceM: number;
+}
+
+/** Nearest real health facility (CNES/DATASUS) to a point — surfaces real reference data on the Dashboard. */
+export async function getNearestHealthFacility(lat: number, lon: number): Promise<NearestFacility | null> {
+  const { data, error } = await supabase.from("health_facilities").select("name, type, lat, lon");
+  if (error || !data || data.length === 0) return null;
+
+  let nearest: NearestFacility | null = null;
+  let minDist = Infinity;
+  for (const f of data) {
+    const d = distanceMeters(
+      { latitude: lat, longitude: lon },
+      { latitude: Number(f.lat), longitude: Number(f.lon) },
+    );
+    if (d < minDist) {
+      minDist = d;
+      nearest = { name: f.name, type: f.type ?? "UBS", distanceM: d };
+    }
+  }
+  return nearest;
+}
+
 function read(): Overrides {
   if (typeof window === "undefined") return {};
   try {

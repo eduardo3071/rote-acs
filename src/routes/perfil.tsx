@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle2, Cloud, Copy, Database, Languages, Loader2, LogOut, Share2, ShieldCheck, Users, User } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
@@ -137,6 +137,11 @@ function ProfilePage() {
             <AlertCircle className="size-4 shrink-0" aria-hidden /> {exportError}
           </p>
         )}
+
+        <Link to="/perfil/dados"
+          className="flex h-14 items-center justify-center gap-2 rounded-lg border border-border bg-elevated text-body font-semibold text-primary">
+          <Database className="size-5" aria-hidden /> Fontes de dados e transparência da IA
+        </Link>
 
         <section className="flex flex-col gap-2">
           <h2 className="label-caps text-muted-foreground">Configurações</h2>
