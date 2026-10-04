@@ -28,3 +28,21 @@ self.addEventListener("fetch", (event) => {
   if (event.request.mode !== "navigate") return;
   event.respondWith(fetch(event.request).catch(() => caches.match(SHELL_URL)));
 });
+
+// Offline voice model (Vosk): cache-first so speech recognition works without
+// internet after the first download. Separate from the navigation shell above.
+const MODEL_CACHE = "roteacs-vosk-model-v1";
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== "GET") return;
+  if (!url.pathname.includes("vosk-model-small-pt")) return;
+  event.respondWith(
+    caches.open(MODEL_CACHE).then(async (cache) => {
+      const hit = await cache.match(event.request);
+      if (hit) return hit;
+      const res = await fetch(event.request);
+      if (res.ok) cache.put(event.request, res.clone());
+      return res;
+    }),
+  );
+});
