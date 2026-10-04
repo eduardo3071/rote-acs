@@ -115,6 +115,18 @@ async function loadRemoteFamilies(): Promise<Family[]> {
   return families;
 }
 
+/**
+ * Forces an immediate re-fetch (updating the local cache) and notifies any mounted
+ * useFamilies()/useFamily() hooks. Needed after a territory switch: `notifyFamiliesChanged()`
+ * alone only helps hooks that are already mounted elsewhere — on the Perfil screen itself,
+ * nothing is listening, so the cached count there would otherwise stay stale until some other
+ * screen happens to fetch.
+ */
+export async function refreshFamiliesNow(): Promise<void> {
+  await loadRemoteFamilies();
+  notifyFamiliesChanged();
+}
+
 /** Fetches a single family by id from Supabase; falls back to the cache, then the mock dataset. */
 async function loadRemoteFamily(id: string): Promise<Family | undefined> {
   const { data, error } = await supabase.from("families").select("*").eq("id", id).single();
