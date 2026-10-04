@@ -103,7 +103,7 @@ function ProfilePage() {
       const { payload } = await exportToDhis2();
       setJson(payload);
     } catch (e) {
-      setExportError(e instanceof Error ? e.message : "Não foi possível gerar o export.");
+      setExportError(e instanceof Error ? e.message : t("perfil.exportError"));
     } finally {
       setExporting(false);
     }
@@ -264,7 +264,7 @@ function ProfilePage() {
               <span className="text-small text-muted-foreground">{t("perfil.country")}</span>
               <select disabled value="BR"
                 className="h-12 rounded-lg border border-border bg-elevated px-4 text-body text-foreground opacity-70">
-                <option value="BR">Brasil</option>
+                <option value="BR">{t("perfil.brazil")}</option>
               </select>
             </label>
             <label className="flex flex-col gap-1">
