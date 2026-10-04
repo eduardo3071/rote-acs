@@ -66,13 +66,10 @@ function Dashboard() {
           </section>
 
           <section className="rounded-xl border border-border bg-card p-4 animate-rise-in">
-            <div className="flex items-center justify-between">
-              <p className="label-caps flex items-center gap-1 text-muted-foreground"><MapIcon className="size-3" aria-hidden /> Território</p>
-              <span className="text-label text-ink-faint">Ilustrativo</span>
-            </div>
-            <div className="mx-auto mt-2 max-w-[14rem]"><TerritoryMap families={mockFamilies} focusId={top?.id} /></div>
+            <p className="label-caps flex items-center gap-1 text-muted-foreground"><MapIcon className="size-3" aria-hidden /> Território</p>
+            <div className="mt-2"><TerritoryMap families={mockFamilies} focusId={top?.id} /></div>
             <p className="mt-2 text-small text-muted-foreground">
-              Área circulada: famílias próximas com a mesma fonte de água.
+              Círculo vermelho: famílias próximas com a mesma fonte de água.
             </p>
           </section>
         </div>
