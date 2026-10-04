@@ -24,6 +24,10 @@ export interface Family {
   riskScore: number; // 0–100
   riskReason: string;
   clusterRisk: boolean;
+  /** Pregnant woman registered in the household (database only). */
+  hasPregnant?: boolean;
+  /** Elderly/adult with chronic disease registered (database only). */
+  hasChronic?: boolean;
 }
 
 export type FamilyInput = Omit<Family, "riskScore" | "riskReason">;
