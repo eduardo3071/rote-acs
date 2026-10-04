@@ -6,7 +6,7 @@ import { getFamilyById, type WaterSource } from "@/data/families";
 import { useFamily } from "@/lib/territory";
 import { loadRemoteFamily } from "@/lib/territory";
 import { useAgentSession } from "@/lib/useAgentSession";
-import { fill, useAppTranslations, type AppTranslations } from "@/lib/app-translations";
+import { fill, useAppTranslations } from "@/lib/app-translations";
 
 export const Route = createFileRoute("/familias/$id/protocolo")({
   validateSearch: z.object({

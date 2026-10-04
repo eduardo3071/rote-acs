@@ -275,7 +275,7 @@ function VisitFlow() {
           return parsed;
         }
       } catch { /* no speech detected — fall through to retry/give-up below */ }
-      if (i === 0) await speak("Não entendi. Pode repetir?");
+      if (i === 0) await speak(m.visit.misunderstood.replace('"{text}". Toque de novo ou selecione manualmente.', '').replace('"{text}". Tap again or select manually.', '').replace('"{text}". Toca otra vez o selecciona manualmente.', ''));
     }
     return null;
   };
